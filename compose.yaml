@@ -1,0 +1,20 @@
+services:
+  database:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wholseler
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-wholseler_local}
+      POSTGRES_DB: wholseler
+      TZ: Asia/Kolkata
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - wholseler_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wholseler -d wholseler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  wholseler_postgres:

@@ -1,0 +1,445 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum Role {
+  PLATFORM_ADMIN
+  PLATFORM_OPERATIONS
+  WHOLESALER_OWNER
+  WHOLESALER_STAFF
+  SELLER
+}
+enum Verification {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+enum Visibility {
+  PUBLIC
+  APPROVED_SELLERS
+  INQUIRY
+}
+enum Moderation {
+  PENDING
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+enum MovementType {
+  OPENING
+  PURCHASE
+  BILLING
+  RETURN
+  CANCELLATION
+  ADJUSTMENT
+  STOCK_OUT
+}
+enum InvoiceStatus {
+  ISSUED
+  CANCELLED
+}
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  QUOTED
+  WON
+  LOST
+}
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+model User {
+  id String @id @default(cuid())
+  name String
+  phone String @unique
+  role Role
+  disabled Boolean @default(false)
+  isSample Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business? @relation("Owner")
+  staff Staff?
+  seller Seller?
+  sessions Session[]
+  invoices Invoice[] @relation("InvoiceActor")
+  movements StockMovement[]
+  auditLogs AuditLog[]
+  notifications Notification[]
+  tickets SupportTicket[]
+  ticketMessages TicketMessage[]
+  payments Payment[]
+  returns InvoiceReturn[]
+  uploads Upload[]
+}
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  @@index([expiresAt])
+}
+model OtpChallenge {
+  id String @id @default(cuid())
+  phone String
+  codeHash String?
+  providerId String?
+  accountType Role
+  attempts Int @default(0)
+  consumedAt DateTime?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([phone,createdAt])
+}
+model Plan {
+  id String @id @default(cuid())
+  name String @unique
+  monthlyPricePaise Int
+  productLimit Int
+  staffLimit Int
+  bulkImport Boolean @default(false)
+  advancedReports Boolean @default(false)
+  active Boolean @default(true)
+  businesses Business[]
+}
+model Business {
+  id String @id @default(cuid())
+  ownerId String @unique
+  planId String
+  name String
+  phone String
+  address String
+  city String
+  marketArea String
+  categories String[]
+  gstNumber String @default("")
+  description String @default("")
+  moq Int @default(1)
+  deliveryInfo String @default("")
+  verificationStatus Verification @default(PENDING)
+  verificationNote String @default("")
+  onboardingNote String @default("")
+  invoicePrefix String @default("WH")
+  invoiceCounter Int @default(0)
+  revision Int @default(0)
+  isSample Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner User @relation("Owner",fields:[ownerId],references:[id])
+  plan Plan @relation(fields:[planId],references:[id])
+  staff Staff[]
+  products Product[]
+  variants Variant[]
+  movements StockMovement[]
+  invoices Invoice[]
+  inquiries Inquiry[]
+  sellerAccess SellerAccess[]
+  uploads Upload[]
+  auditLogs AuditLog[]
+  notifications Notification[]
+  tickets SupportTicket[]
+  payments Payment[]
+  returns InvoiceReturn[]
+  @@index([verificationStatus,city])
+}
+model Staff {
+  id String @id @default(cuid())
+  businessId String
+  userId String @unique
+  designation String
+  permissions String[]
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields:[businessId],references:[id])
+  user User @relation(fields:[userId],references:[id])
+  @@index([businessId,active])
+}
+model Seller {
+  id String @id @default(cuid())
+  userId String @unique
+  businessName String
+  city String
+  gstNumber String @default("")
+  verificationStatus Verification @default(PENDING)
+  verificationNote String @default("")
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId],references:[id])
+  inquiries Inquiry[]
+  favorites Favorite[]
+  supplierAccess SellerAccess[]
+  @@index([verificationStatus])
+}
+model SellerAccess {
+  id String @id @default(cuid())
+  businessId String
+  sellerId String
+  approved Boolean @default(false)
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id])
+  seller Seller @relation(fields:[sellerId],references:[id])
+  @@unique([businessId,sellerId])
+}
+model Product {
+  id String @id @default(cuid())
+  businessId String
+  name String
+  sku String
+  category String
+  description String @default("")
+  pricePaise Int
+  cartonPricePaise Int?
+  cartonUnits Int @default(12)
+  moq Int @default(1)
+  visibility Visibility @default(PUBLIC)
+  moderation Moderation @default(PENDING)
+  moderationNote String @default("")
+  tags String[]
+  viewCount Int @default(0)
+  soldUnits Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields:[businessId],references:[id])
+  variants Variant[]
+  images Upload[]
+  movements StockMovement[]
+  invoiceItems InvoiceItem[]
+  inquiries Inquiry[]
+  favorites Favorite[]
+  @@unique([businessId,sku])
+  @@index([businessId,moderation])
+  @@index([moderation,category,createdAt])
+}
+model Variant {
+  id String @id @default(cuid())
+  businessId String
+  productId String
+  size String
+  color String
+  stock Int @default(0)
+  lowStockAt Int @default(10)
+  archived Boolean @default(false)
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id])
+  product Product @relation(fields:[productId],references:[id])
+  movements StockMovement[]
+  invoiceItems InvoiceItem[]
+  @@unique([productId,size,color])
+  @@index([businessId,archived,stock])
+}
+model StockMovement {
+  id String @id @default(cuid())
+  businessId String
+  productId String
+  variantId String
+  actorId String
+  type MovementType
+  quantity Int
+  balanceAfter Int
+  note String @default("")
+  reference String?
+  requestKey String?
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id])
+  product Product @relation(fields:[productId],references:[id])
+  variant Variant @relation(fields:[variantId],references:[id])
+  actor User @relation(fields:[actorId],references:[id])
+  @@unique([businessId,requestKey])
+  @@index([businessId,createdAt])
+  @@index([variantId,createdAt])
+}
+model Invoice {
+  id String @id @default(cuid())
+  businessId String
+  actorId String
+  number String
+  requestKey String
+  requestHash String
+  buyerName String
+  buyerPhone String
+  buyerAddress String @default("")
+  buyerGst String @default("")
+  businessSnapshot Json
+  status InvoiceStatus @default(ISSUED)
+  subtotalPaise Int
+  discountPaise Int
+  taxPaise Int
+  taxMode String
+  taxRateBps Int
+  totalPaise Int
+  paidPaise Int @default(0)
+  returnedPaise Int @default(0)
+  paymentMode String
+  note String @default("")
+  cancellationReason String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields:[businessId],references:[id])
+  actor User @relation("InvoiceActor",fields:[actorId],references:[id])
+  items InvoiceItem[]
+  payments Payment[]
+  returns InvoiceReturn[]
+  inquiries Inquiry[]
+  @@unique([businessId,number])
+  @@unique([businessId,requestKey])
+  @@index([businessId,createdAt])
+  @@index([businessId,buyerPhone])
+}
+model InvoiceItem {
+  id String @id @default(cuid())
+  invoiceId String
+  productId String
+  variantId String
+  productName String
+  sku String
+  size String
+  color String
+  quantity Int
+  returnedQuantity Int @default(0)
+  unitPricePaise Int
+  lineTotalPaise Int
+  invoice Invoice @relation(fields:[invoiceId],references:[id])
+  product Product @relation(fields:[productId],references:[id])
+  variant Variant @relation(fields:[variantId],references:[id])
+  returnItems ReturnItem[]
+}
+model Payment {
+  id String @id @default(cuid())
+  businessId String
+  invoiceId String
+  actorId String
+  requestKey String
+  amountPaise Int
+  mode String
+  note String @default("")
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id])
+  invoice Invoice @relation(fields:[invoiceId],references:[id])
+  actor User @relation(fields:[actorId],references:[id])
+  @@unique([businessId,requestKey])
+}
+model InvoiceReturn {
+  id String @id @default(cuid())
+  businessId String
+  invoiceId String
+  actorId String
+  requestKey String
+  amountPaise Int
+  reason String
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id])
+  invoice Invoice @relation(fields:[invoiceId],references:[id])
+  actor User @relation(fields:[actorId],references:[id])
+  items ReturnItem[]
+  @@unique([businessId,requestKey])
+}
+model ReturnItem {
+  id String @id @default(cuid())
+  returnId String
+  invoiceItemId String
+  quantity Int
+  amountPaise Int
+  return InvoiceReturn @relation(fields:[returnId],references:[id])
+  invoiceItem InvoiceItem @relation(fields:[invoiceItemId],references:[id])
+}
+model Inquiry {
+  id String @id @default(cuid())
+  businessId String
+  sellerId String
+  productId String
+  invoiceId String?
+  requestKey String @unique
+  quantity Int
+  channel String
+  note String @default("")
+  ownerNote String @default("")
+  status InquiryStatus @default(NEW)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields:[businessId],references:[id])
+  seller Seller @relation(fields:[sellerId],references:[id])
+  product Product @relation(fields:[productId],references:[id])
+  invoice Invoice? @relation(fields:[invoiceId],references:[id])
+  @@index([businessId,status,createdAt])
+  @@index([sellerId,createdAt])
+}
+model Favorite {
+  id String @id @default(cuid())
+  sellerId String
+  productId String
+  seller Seller @relation(fields:[sellerId],references:[id])
+  product Product @relation(fields:[productId],references:[id])
+  @@unique([sellerId,productId])
+}
+model Upload {
+  id String @id @default(cuid())
+  businessId String?
+  userId String
+  productId String?
+  kind String
+  mime String
+  fileName String
+  storageKey String @unique
+  size Int
+  createdAt DateTime @default(now())
+  business Business? @relation(fields:[businessId],references:[id])
+  user User @relation(fields:[userId],references:[id])
+  product Product? @relation(fields:[productId],references:[id])
+  @@index([businessId,kind])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  businessId String?
+  actorId String
+  action String
+  entityId String
+  detail String
+  createdAt DateTime @default(now())
+  business Business? @relation(fields:[businessId],references:[id])
+  actor User @relation(fields:[actorId],references:[id])
+  @@index([businessId,createdAt])
+}
+model Notification {
+  id String @id @default(cuid())
+  businessId String?
+  userId String?
+  title String
+  body String
+  href String
+  readBy String[]
+  createdAt DateTime @default(now())
+  business Business? @relation(fields:[businessId],references:[id])
+  user User? @relation(fields:[userId],references:[id])
+  @@index([businessId,createdAt])
+  @@index([userId,createdAt])
+}
+model SupportTicket {
+  id String @id @default(cuid())
+  businessId String?
+  userId String
+  subject String
+  category String
+  status TicketStatus @default(OPEN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business? @relation(fields:[businessId],references:[id])
+  user User @relation(fields:[userId],references:[id])
+  messages TicketMessage[]
+  @@index([status,createdAt])
+}
+model TicketMessage {
+  id String @id @default(cuid())
+  ticketId String
+  userId String
+  text String
+  createdAt DateTime @default(now())
+  ticket SupportTicket @relation(fields:[ticketId],references:[id])
+  user User @relation(fields:[userId],references:[id])
+}

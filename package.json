@@ -1,31 +1,20 @@
 {
-  "name": "wholesale-commerce-system",
-  "version": "0.1.0",
-  "private": true,
+  "name": "wholseler", "version": "0.2.0", "private": true,
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "next dev",
-    "build": "npm run typecheck && next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit --pretty false",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "dev": "node scripts/dev.mjs",
+    "build": "npm run build -w @wholesale/shared && npm run build -w @wholesale/api && npm run build -w @wholesale/web",
+    "start": "node scripts/dev.mjs --production",
+    "typecheck": "npm run build -w @wholesale/shared && npm run typecheck -w @wholesale/api && npm run typecheck -w @wholesale/web",
+    "lint": "npm run lint -w @wholesale/web",
+    "db:generate": "prisma generate --schema packages/db/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema packages/db/schema.prisma",
+    "db:seed": "tsx packages/db/seed.ts",
+    "db:studio": "prisma studio --schema packages/db/schema.prisma",
+    "db:local": "node scripts/local-db.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "test:integration": "tsx tests/integration.ts",
+    "setup": "npm run db:generate && npm run db:deploy && npm run db:seed"
   },
-  "dependencies": {
-    "@prisma/client": "^6.12.0",
-    "next": "^16.3.8",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3.3.7",
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "eslint": "^9.0.0",
-    "eslint-config-next": "^16.3.8",
-    "prisma": "^6.12.0",
-    "typescript": "5.8.3"
-  }
+  "devDependencies": {"@types/node": "^24.0.0", "prisma": "6.19.3", "tsx": "^4.21.0", "typescript": "^5.9.3", "embedded-postgres": "18.4.0-beta.17"}
 }

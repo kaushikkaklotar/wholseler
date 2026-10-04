@@ -1,8 +1,15 @@
 # Dependencies
 /node_modules/
+**/node_modules/
 
 # Build output and caches
 /.next/
+**/.next/
+**/dist/
+/.data/
+/test-results/
+**/next-env.d.ts
+*.bundle
 /out/
 /dist/
 /build/
