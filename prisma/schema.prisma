@@ -1,0 +1,267 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PLATFORM_ADMIN
+  PLATFORM_OPERATIONS
+  WHOLESALER_OWNER
+  WHOLESALER_STAFF
+  SELLER
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum StaffStatus {
+  ACTIVE
+  INVITED
+  DISABLED
+}
+
+enum ModuleKey {
+  DASHBOARD
+  PRODUCTS
+  INVENTORY
+  BILLING
+  SELLERS
+  REPORTS
+  STAFF
+  SETTINGS
+}
+
+enum PermissionAction {
+  VIEW
+  CREATE
+  EDIT
+  DELETE
+}
+
+enum ProductVisibility {
+  PUBLIC
+  APPROVED_SELLERS
+  HIDDEN
+}
+
+enum StockMovementType {
+  OPENING
+  PURCHASE
+  BILLING
+  RETURN
+  ADJUSTMENT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  phone        String    @unique
+  email        String?   @unique
+  role         UserRole
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  ownedWholesalers Wholesaler[]      @relation("WholesalerOwner")
+  staffProfile     WholesalerStaff?
+  sellerProfile    SellerProfile?
+}
+
+model SubscriptionPlan {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  monthlyPrice   Int
+  productLimit   Int
+  staffLimit     Int
+  invoiceLimit   Int
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  wholesalers Wholesaler[]
+}
+
+model Wholesaler {
+  id                   String             @id @default(cuid())
+  ownerId              String
+  subscriptionPlanId   String
+  businessName         String
+  gstNumber            String?
+  phone                String
+  address              String
+  marketArea           String
+  categories           String[]
+  verificationStatus   VerificationStatus @default(PENDING)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  owner              User             @relation("WholesalerOwner", fields: [ownerId], references: [id])
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id])
+  staff              WholesalerStaff[]
+  products           Product[]
+  stockMovements     StockMovement[]
+  invoices           Invoice[]
+  inquiries          SellerInquiry[]
+}
+
+model WholesalerStaff {
+  id            String      @id @default(cuid())
+  userId        String      @unique
+  wholesalerId  String
+  designation   String
+  status        StaffStatus @default(INVITED)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id])
+  wholesaler    Wholesaler        @relation(fields: [wholesalerId], references: [id], onDelete: Cascade)
+  permissions   StaffPermission[]
+  invoices      Invoice[]         @relation("InvoiceCreatedBy")
+
+  @@index([wholesalerId])
+}
+
+model StaffPermission {
+  id       String           @id @default(cuid())
+  staffId  String
+  module   ModuleKey
+  action   PermissionAction
+  allowed  Boolean          @default(false)
+
+  staff WholesalerStaff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, module, action])
+}
+
+model SellerProfile {
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  businessName       String
+  city               String
+  verificationStatus VerificationStatus @default(PENDING)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id])
+  inquiries SellerInquiry[]
+  invoices  Invoice[]
+}
+
+model Product {
+  id             String            @id @default(cuid())
+  wholesalerId   String
+  name           String
+  sku            String
+  category       String
+  wholesalePrice Int
+  cartonPrice    Int?
+  moq            Int               @default(1)
+  visibility     ProductVisibility @default(PUBLIC)
+  tags           String[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  wholesaler     Wholesaler        @relation(fields: [wholesalerId], references: [id], onDelete: Cascade)
+  variants       ProductVariant[]
+  stockMovements StockMovement[]
+  invoiceItems   InvoiceItem[]
+  inquiries      SellerInquiry[]
+
+  @@unique([wholesalerId, sku])
+  @@index([wholesalerId, category])
+}
+
+model ProductVariant {
+  id        String   @id @default(cuid())
+  productId String
+  size      String?
+  color     String?
+  stock     Int      @default(0)
+  reserved  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockMovements StockMovement[]
+  invoiceItems   InvoiceItem[]
+}
+
+model StockMovement {
+  id               String            @id @default(cuid())
+  wholesalerId     String
+  productId        String
+  productVariantId String?
+  type             StockMovementType
+  quantity         Int
+  note             String?
+  createdAt        DateTime          @default(now())
+
+  wholesaler     Wholesaler      @relation(fields: [wholesalerId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id])
+}
+
+model SellerInquiry {
+  id           String   @id @default(cuid())
+  wholesalerId String
+  sellerId     String
+  productId    String
+  quantityNote String?
+  source       String   @default("WhatsApp")
+  createdAt    DateTime @default(now())
+
+  wholesaler Wholesaler    @relation(fields: [wholesalerId], references: [id], onDelete: Cascade)
+  seller     SellerProfile @relation(fields: [sellerId], references: [id])
+  product    Product       @relation(fields: [productId], references: [id])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  wholesalerId    String
+  sellerId        String?
+  createdById     String
+  invoiceNumber   String
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Int
+  discount        Int           @default(0)
+  total           Int
+  paymentMode     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  wholesaler Wholesaler       @relation(fields: [wholesalerId], references: [id], onDelete: Cascade)
+  seller     SellerProfile?   @relation(fields: [sellerId], references: [id])
+  createdBy  WholesalerStaff  @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  items      InvoiceItem[]
+
+  @@unique([wholesalerId, invoiceNumber])
+}
+
+model InvoiceItem {
+  id               String @id @default(cuid())
+  invoiceId        String
+  productId        String
+  productVariantId String?
+  quantity         Int
+  unitPrice        Int
+  total            Int
+
+  invoice        Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product        Product         @relation(fields: [productId], references: [id])
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id])
+}

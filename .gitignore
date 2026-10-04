@@ -1,0 +1,23 @@
+# Dependencies
+/node_modules/
+
+# Build output and caches
+/.next/
+/out/
+/dist/
+/build/
+/coverage/
+/.vercel/
+*.tsbuildinfo
+.eslintcache
+
+# Local environment files
+.env*
+!.env.example
+
+# Logs
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
