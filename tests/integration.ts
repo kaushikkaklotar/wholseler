@@ -96,77 +96,84 @@ function invoice(variantId: string, requestKey = randomUUID()) {
   };
 }
 
-try {
-  await db.$connect();
-  const a = await fixture("A"),
-    b = await fixture("B");
-  const concurrent = await Promise.allSettled([
-    billing.create(a.actor, invoice(a.variant.id)),
-    billing.create(a.actor, invoice(a.variant.id)),
-  ]);
-  assert.equal(
-    concurrent.filter((r) => r.status === "fulfilled").length,
-    1,
-    "only one competing invoice should commit",
-  );
-  assert.equal(
-    await db.variant
-      .findUniqueOrThrow({ where: { id: a.variant.id } })
-      .then((v) => v.stock),
-    2,
-    "stock must remain non-negative and reflect one sale",
-  );
-  assert.equal(
-    await db.invoice.count({ where: { businessId: a.actor.businessId! } }),
-    1,
-  );
+async function main() {
+  try {
+    await db.$connect();
+    const a = await fixture("A"),
+      b = await fixture("B");
+    const concurrent = await Promise.allSettled([
+      billing.create(a.actor, invoice(a.variant.id)),
+      billing.create(a.actor, invoice(a.variant.id)),
+    ]);
+    assert.equal(
+      concurrent.filter((r) => r.status === "fulfilled").length,
+      1,
+      "only one competing invoice should commit",
+    );
+    assert.equal(
+      await db.variant
+        .findUniqueOrThrow({ where: { id: a.variant.id } })
+        .then((v) => v.stock),
+      2,
+      "stock must remain non-negative and reflect one sale",
+    );
+    assert.equal(
+      await db.invoice.count({ where: { businessId: a.actor.businessId! } }),
+      1,
+    );
 
-  const key = randomUUID(),
-    body = invoice(b.variant.id, key);
-  const first = await billing.create(b.actor, body),
-    repeated = await billing.create(b.actor, body);
-  assert.equal(
-    first.id,
-    repeated.id,
-    "same request key and payload must be idempotent",
-  );
-  await assert.rejects(
-    () => billing.create(b.actor, { ...body, buyerName: "Changed Buyer" }),
-    /request key/i,
-  );
-  await assert.rejects(
-    () => billing.create(a.actor, invoice(b.variant.id)),
-    /does not belong/i,
-  );
-  assert.equal(
-    await db.stockMovement.count({
-      where: { businessId: b.actor.businessId!, type: "BILLING" },
-    }),
-    1,
-    "idempotent replay must not duplicate ledger entries",
-  );
-  console.log(
-    "Integration checks passed: concurrent stock guard, idempotent billing, tenant isolation and ledger uniqueness.",
-  );
-} finally {
-  for (const businessId of ids.businesses) {
-    await db.notification.deleteMany({ where: { businessId } });
-    await db.auditLog.deleteMany({ where: { businessId } });
-    await db.stockMovement.deleteMany({ where: { businessId } });
-    await db.payment.deleteMany({ where: { businessId } });
-    await db.returnItem.deleteMany({ where: { return: { businessId } } });
-    await db.invoiceReturn.deleteMany({ where: { businessId } });
-    await db.invoiceItem.deleteMany({ where: { invoice: { businessId } } });
-    await db.inquiry.deleteMany({ where: { businessId } });
-    await db.invoice.deleteMany({ where: { businessId } });
-    await db.upload.deleteMany({ where: { businessId } });
-    await db.variant.deleteMany({ where: { businessId } });
-    await db.product.deleteMany({ where: { businessId } });
-    await db.staff.deleteMany({ where: { businessId } });
-    await db.supportTicket.deleteMany({ where: { businessId } });
-    await db.business.deleteMany({ where: { id: businessId } });
+    const key = randomUUID(),
+      body = invoice(b.variant.id, key);
+    const first = await billing.create(b.actor, body),
+      repeated = await billing.create(b.actor, body);
+    assert.equal(
+      first.id,
+      repeated.id,
+      "same request key and payload must be idempotent",
+    );
+    await assert.rejects(
+      () => billing.create(b.actor, { ...body, buyerName: "Changed Buyer" }),
+      /request key/i,
+    );
+    await assert.rejects(
+      () => billing.create(a.actor, invoice(b.variant.id)),
+      /does not belong/i,
+    );
+    assert.equal(
+      await db.stockMovement.count({
+        where: { businessId: b.actor.businessId!, type: "BILLING" },
+      }),
+      1,
+      "idempotent replay must not duplicate ledger entries",
+    );
+    console.log(
+      "Integration checks passed: concurrent stock guard, idempotent billing, tenant isolation and ledger uniqueness.",
+    );
+  } finally {
+    for (const businessId of ids.businesses) {
+      await db.notification.deleteMany({ where: { businessId } });
+      await db.auditLog.deleteMany({ where: { businessId } });
+      await db.stockMovement.deleteMany({ where: { businessId } });
+      await db.payment.deleteMany({ where: { businessId } });
+      await db.returnItem.deleteMany({ where: { return: { businessId } } });
+      await db.invoiceReturn.deleteMany({ where: { businessId } });
+      await db.invoiceItem.deleteMany({ where: { invoice: { businessId } } });
+      await db.inquiry.deleteMany({ where: { businessId } });
+      await db.invoice.deleteMany({ where: { businessId } });
+      await db.upload.deleteMany({ where: { businessId } });
+      await db.variant.deleteMany({ where: { businessId } });
+      await db.product.deleteMany({ where: { businessId } });
+      await db.staff.deleteMany({ where: { businessId } });
+      await db.supportTicket.deleteMany({ where: { businessId } });
+      await db.business.deleteMany({ where: { id: businessId } });
+    }
+    await db.session.deleteMany({ where: { userId: { in: ids.users } } });
+    await db.user.deleteMany({ where: { id: { in: ids.users } } });
+    await db.$disconnect();
   }
-  await db.session.deleteMany({ where: { userId: { in: ids.users } } });
-  await db.user.deleteMany({ where: { id: { in: ids.users } } });
-  await db.$disconnect();
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
