@@ -11,9 +11,38 @@ import { CommunicationModule } from "./communication";
 import { MediaModule } from "./media";
 @Controller("v1")
 class SystemController {
-  constructor(@Inject(Database)private readonly db:Database){}
-  @Get("health") async health(){await this.db.$queryRaw`SELECT 1`;return {status:"ok"};}
-  @Get("config") async config(){const development=developmentAuth();return {development,accounts:development?await this.db.user.findMany({where:{isSample:true,disabled:false},select:{name:true,phone:true,role:true},orderBy:{role:"asc"}}):[]};}
+  constructor(@Inject(Database) private readonly db: Database) {}
+  @Get("health") async health() {
+    await this.db.$queryRaw`SELECT 1`;
+    return { status: "ok" };
+  }
+  @Get("config") async config() {
+    const development = developmentAuth();
+    return {
+      development,
+      accounts: development
+        ? await this.db.user.findMany({
+            where: { isSample: true, disabled: false },
+            select: { name: true, phone: true, role: true },
+            orderBy: { role: "asc" },
+          })
+        : [],
+    };
+  }
 }
-@Module({imports:[DatabaseModule,AuthModule,CatalogModule,BillingModule,SourcingModule,TeamModule,ReportingModule,PlatformModule,CommunicationModule,MediaModule],controllers:[SystemController]})
+@Module({
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    CatalogModule,
+    BillingModule,
+    SourcingModule,
+    TeamModule,
+    ReportingModule,
+    PlatformModule,
+    CommunicationModule,
+    MediaModule,
+  ],
+  controllers: [SystemController],
+})
 export class AppModule {}

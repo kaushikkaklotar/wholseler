@@ -175,6 +175,7 @@ model Seller {
   inquiries Inquiry[]
   favorites Favorite[]
   supplierAccess SellerAccess[]
+  productViews ProductView[]
   @@index([verificationStatus])
 }
 model SellerAccess {
@@ -213,9 +214,19 @@ model Product {
   invoiceItems InvoiceItem[]
   inquiries Inquiry[]
   favorites Favorite[]
+  views ProductView[]
   @@unique([businessId,sku])
   @@index([businessId,moderation])
   @@index([moderation,category,createdAt])
+}
+model ProductView {
+  id String @id @default(cuid())
+  productId String
+  sellerId String
+  day DateTime @db.Date
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  seller Seller @relation(fields:[sellerId],references:[id],onDelete:Cascade)
+  @@unique([productId,sellerId,day])
 }
 model Variant {
   id String @id @default(cuid())

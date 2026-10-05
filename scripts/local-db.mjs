@@ -2,24 +2,90 @@ import EmbeddedPostgres from "embedded-postgres";
 import { config } from "dotenv";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createConnection } from "node:net";
 import { existsSync } from "node:fs";
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
-config({path:path.join(root,".env"),quiet:true});
-if(process.env.NODE_ENV==="production")throw new Error("Use a managed PostgreSQL database in production");
-if(process.getuid?.()===0)throw new Error("Run the local database as a non-root user");
-const url=new URL(process.env.DATABASE_URL||"postgresql://wholseler:wholseler_local@127.0.0.1:54329/wholseler");
-if(!["127.0.0.1","localhost"].includes(url.hostname))throw new Error("db:local only supports a loopback database");
-const databaseDir=process.env.LOCAL_DB_DATA_DIR||path.join(root,".data/postgres");
-const pg=new EmbeddedPostgres({databaseDir,user:decodeURIComponent(url.username),password:decodeURIComponent(url.password),port:Number(url.port)||54329,persistent:true,authMethod:"scram-sha-256",postgresFlags:["-h","127.0.0.1"],onLog:()=>{},onError:message=>console.error(String(message))});
-if(!existsSync(path.join(databaseDir,"PG_VERSION")))await pg.initialise();
-await pg.start();
-const client=pg.getPgClient();await client.connect();
-const database=url.pathname.slice(1);
-if(!/^[a-zA-Z0-9_]+$/.test(database))throw new Error("Invalid local database name");
-const existing=await client.query("SELECT 1 FROM pg_database WHERE datname=$1",[database]);
-if(!existing.rowCount)await pg.createDatabase(database);
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+config({ path: path.join(root, ".env"), quiet: true });
+if (process.env.NODE_ENV === "production")
+  throw new Error("Use a managed PostgreSQL database in production");
+if (process.getuid?.() === 0)
+  throw new Error("Run the local database as a non-root user");
+const url = new URL(
+  process.env.DATABASE_URL ||
+    "postgresql://wholseler:wholseler_local@127.0.0.1:54329/wholseler",
+);
+if (!["127.0.0.1", "localhost"].includes(url.hostname))
+  throw new Error("db:local only supports a loopback database");
+const alreadyListening = await new Promise((resolve) => {
+  const socket = createConnection({
+    host: "127.0.0.1",
+    port: Number(url.port) || 54329,
+  });
+  socket.once("connect", () => {
+    socket.destroy();
+    resolve(true);
+  });
+  socket.once("error", () => resolve(false));
+  socket.setTimeout(2000, () => {
+    socket.destroy();
+    resolve(false);
+  });
+});
+if (alreadyListening) {
+  console.log(
+    `PostgreSQL port ${url.port} is already in use. Reuse the running local database.`,
+  );
+  process.exit(0);
+}
+const startupLog = [];
+const databaseDir =
+  process.env.LOCAL_DB_DATA_DIR || path.join(root, ".data/postgres");
+const pg = new EmbeddedPostgres({
+  databaseDir,
+  user: decodeURIComponent(url.username),
+  password: decodeURIComponent(url.password),
+  port: Number(url.port) || 54329,
+  persistent: true,
+  authMethod: "scram-sha-256",
+  postgresFlags: ["-h", "127.0.0.1"],
+  onLog: (message) => {
+    startupLog.push(String(message));
+    if (startupLog.length > 15) startupLog.shift();
+  },
+  onError: (message) => console.error(String(message)),
+});
+if (!existsSync(path.join(databaseDir, "PG_VERSION"))) await pg.initialise();
+try {
+  await pg.start();
+} catch {
+  throw new Error(
+    "Local PostgreSQL could not start: " +
+      startupLog
+        .join("")
+        .replaceAll(decodeURIComponent(url.password), "[redacted]"),
+  );
+}
+const client = pg.getPgClient();
+await client.connect();
+const database = url.pathname.slice(1);
+if (!/^[a-zA-Z0-9_]+$/.test(database))
+  throw new Error("Invalid local database name");
+const existing = await client.query(
+  "SELECT 1 FROM pg_database WHERE datname=$1",
+  [database],
+);
+if (!existing.rowCount) await pg.createDatabase(database);
 await client.end();
-console.log(`Local PostgreSQL ready on 127.0.0.1:${url.port}. Data persists in .data/postgres.`);
-let stopping=false;const stop=async()=>{if(stopping)return;stopping=true;await pg.stop();process.exit(0);};
-process.on("SIGINT",stop);process.on("SIGTERM",stop);
-setInterval(()=>{},60_000);
+console.log(
+  `Local PostgreSQL ready on 127.0.0.1:${url.port}. Data persists in .data/postgres.`,
+);
+let stopping = false;
+const stop = async () => {
+  if (stopping) return;
+  stopping = true;
+  await pg.stop();
+  process.exit(0);
+};
+process.on("SIGINT", stop);
+process.on("SIGTERM", stop);
+setInterval(() => {}, 60_000);
