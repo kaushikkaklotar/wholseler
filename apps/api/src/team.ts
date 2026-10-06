@@ -21,6 +21,7 @@ import {
 import { Ability, AuthModule, type AuthRequest, SessionGuard } from "./auth";
 import { Database, audit } from "./database";
 import { parse } from "./validation";
+import { activeBusiness } from "./business-policy";
 @Injectable()
 export class TeamService {
   constructor(@Inject(Database) private readonly db: Database) {}
@@ -72,6 +73,7 @@ export class TeamService {
           "Disable this account and invite a new member to change the login mobile number",
         );
       if (input.active && !existing?.active) {
+        activeBusiness(business);
         const count = await tx.staff.count({
           where: { businessId: business.id, active: true },
         });

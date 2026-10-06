@@ -1,30 +1,37 @@
-# Document alignment
+# Phase 1 document alignment
 
-Source: Wholesale Commerce System Research Report (11 pages). Phase 1 is a wholesale operating system for catalog, inventory, billing and direct seller sourcing. Phase 2/3 are separate work.
+Source: Wholesale Commerce System Research Report (11 pages). Phase 1 is the internal wholesale operating system plus direct buyer sourcing; online checkout is not required.
 
-| Requirement                   | Implementation / verification                                                                                                                                                                              |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Five panels                   | Owner workspace; billing staff with module permissions; seller sourcing; platform admin; operations review/support                                                                                         |
-| Public website and entry flow | Public homepage, search and product detail; role-specific login/registration, OTP resend cooldown and three-step business setup. Public DTO hides private prices and contacts. Buyer return links stay inside the sourcing workspace. |
-| Mobile OTP and role isolation | Database OTP challenges, one-use expiry, attempt/rate limits, opaque hashed sessions, HttpOnly cookies, server permission guards. Development OTP explicitly local. Production MSG91 credentials required. |
-| Multi-tenancy                 | Business context comes from the session. Tenant predicates on all business reads/writes. Cross-tenant invoice/product/stock tests.                                                                         |
-| Catalog and variants          | SKU, category, images, size/colour variants, MOQ, unit/carton pricing, public/approved/inquiry pricing, moderation and duplication                                                                         |
-| Fast bulk entry               | CSV template, preview and validation, grouped variants, atomic import and subscription cap. Images uploaded separately. XLSX and image ZIP mapping remain future extensions.                               |
-| Inventory ledger              | Opening, purchase, billing, stock out, return, cancellation, adjustment. Signed quantities, actor, reason, after-balance and references.                                                                   |
-| Counter billing               | Buyer snapshot, GST/non-GST mode, discount, explicit tax rate, manual payment recording, printable invoice and CSV export. Amounts in integer paise.                                                       |
-| Atomic billing                | PostgreSQL serializable transaction, conditional stock decrement, bounded conflict retries, idempotent request keys.                                                                                       |
-| Returns / cancellation        | Restore only eligible quantities, preserve immutable sales snapshots, ledger entries, due/credit reporting. No payment gateway or automatic refund.                                                        |
-| Seller discovery              | PostgreSQL search, category/location/stock/price filters, new/trending ordering, favorites, live variants and supplier profiles                                                                            |
-| Direct sourcing               | Call/WhatsApp links prepared after recording the inquiry. User sends the message. Inquiry stages, quantity notes, invoice conversion and buyer history.                                                    |
-| Staff caps / permissions      | Serializable cap enforcement, presets, module/action matrix, live permission changes, disabled-session invalidation                                                                                        |
-| Platform workflow             | Business/seller approvals and suspension; product moderation; configurable plans; onboarding notes; support ticket replies; audit trail                                                                    |
-| Reports                       | Daily/monthly net invoice sales, top products, stock movements, low stock, inquiry counts and staff billing                                                                                                |
-| Notifications                 | Persistent in-app inquiry, verification, low stock and support notifications. Outbound promotional/reminder delivery is not enabled.                                                                       |
-| Optional KYC                  | Private document uploads and verification review. GSTIN format validation; no external legal identity verification claim.                                                                                  |
-| Storage                       | Local files for development; private S3/R2 adapter required for production. Sample product illustrations are clearly sample assets.                                                                        |
+| Report requirement | Implemented behavior |
+| --- | --- |
+| Five panels | Owner, permission-limited staff, buyer/seller, platform admin and operations |
+| Public website and login | Public catalog; separate wholesaler/buyer login and explicit registration, one-use mobile OTP, resend cooldown and three-step onboarding |
+| Catalog | SKU, categories, size/colour, MOQ, unit/carton price, visibility, images, duplication and moderation |
+| Fast bulk entry | CSV/XLSX first-sheet preview, grouped variants, image file/ZIP mapping by filename or SKU, atomic retry-safe catalog import; 500 rows and 200 ZIP images per batch |
+| Stock | Physical, reserved and available balances; opening/in/out/sale/return/adjustment ledger; buyer holds with expiry, release and billing consumption; retry-safe CSV/XLSX stock preview/import |
+| Counter billing | GST/non-GST, integer-paise totals, buyer snapshots, discounts, payments, print/CSV, atomic concurrent stock guards, idempotency, returns/cancel |
+| Buyer discovery | Search, category/city/market/stock/price filters, new/trending, product and supplier favorites, available variants, saved supplier arrivals |
+| Category ranking | Daily distinct buyer searches, views, recent incoming movement and billed quantities feed weighted category/trending scores; this is an observed activity score |
+| Direct contact | Supplier CALL/WHATSAPP/BOTH preference, recorded inquiries and stages, buyer history and invoice conversion; the user opens/sends the prepared WhatsApp message |
+| Onboarding/KYC | Business/buyer profiles, marketplace channels, optional GST/PAN and private documents, verification/suspension, product review; no automated legal identity verification |
+| Staff | Live permission matrix, active staff caps, disabled session invalidation and tenant isolation |
+| Subscription | Start/expiry/trial status; monthly/yearly terms, received-payment records and request-key-safe renewals; caps and expiry enforced on server; records accessible after expiry |
+| Operations | Assigned onboarding tasks, categories, due dates, notes and stages; READY requires verified business, published catalog with image and completed tasks |
+| Alerts | In-app notices; consent-based new arrival, stock, inquiry status and manually triggered unpaid-invoice reminders; persistent email/SMS/WhatsApp outbox and honest configured/failed/unknown/accepted states |
+| Reports/support | Daily/monthly sales, products, stock, staff and inquiry reports; support tickets, replies and audits |
+| Storage | Development uploads; private S3/R2 adapter for production |
 
-All plans retain inventory and billing. Starter defaults: ₹999 / month, 3 staff; Growth: ₹1,999; Pro: ₹3,499. Growth/Pro staff/product caps are configurable product defaults, not fixed values prescribed by the report.
+Starter defaults ₹999/month or ₹9,999/year with 3 staff; Growth ₹1,999/₹19,999; Pro ₹3,499/₹34,999. Staff/product limits beyond Starter are configurable product defaults. All plans include stock and billing. Growth/Pro include bulk imports and advanced reports.
 
-Launch requires real supplier data, SMS/DLT credentials, S3/R2, managed PostgreSQL and backups, HTTPS deployment, operational moderation and tax/accounting review. Passing local workflow tests is a development milestone, not evidence of a completed commercial launch.
+The report's pricing recommendations also mention future Pro multi-godown, promotion credits and priority support. Those benefits are **not implemented or advertised as available** in this Phase 1 release; separate commercial scope is needed before selling them. Phase 2 accountant/credit limits and automatic due-date reminders, payroll, Telegram import/reviews/disputes/SEO and Phase 3 accounting/marketplace/AI/logistics remain later phases.
 
-Phase 2 payroll, attendance, salary, credit reminder automation, Telegram import, disputes and Phase 3 Tally/Zoho/AI/logistics integrations are not represented as working integrations.
+## Verification and launch
+
+`npm test` covers money/schema/auth entry and subscription calendar boundaries. `npm run test:integration` checks billing/auth/tenant boundaries. `npm run test:phase1` creates isolated fixtures for reservations vs billing races, retries and expiry, stock/catalog batches, cross-tenant access, renewal enforcement, onboarding tasks, supplier follows, publication alerts, payment reminders, provider queue states and search ranking. Provider calls in this suite are mocked; they do not establish live message delivery.
+
+Before public launch:
+
+- Configure and test real OTP/DLT, approved WhatsApp/SMS templates, opt-in recipients, email sender and private S3/R2.
+- Deploy managed PostgreSQL and HTTPS services; schedule backups and demonstrate restore. Use production administrator provisioning, not sample accounts.
+- Perform owner/staff/buyer/admin/operations acceptance with real supplier catalog and review invoice/tax settings.
+- Complete the report's pilot validation: 20 wholesalers and 50 sellers, then track the 30 active wholesaler / 10,000 product / 500 buyer usage goals. These real-world milestones cannot be replaced by automated development tests.

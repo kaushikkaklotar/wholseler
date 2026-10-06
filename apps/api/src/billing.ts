@@ -31,6 +31,7 @@ import {
 import { Ability, AuthModule, type AuthRequest, SessionGuard } from "./auth";
 import { Database, audit, notify } from "./database";
 import { parse } from "./validation";
+import { activeBusiness } from "./business-policy";
 export function invoiceOutput<
   T extends {
     totalPaise: number;
@@ -157,7 +158,7 @@ export class BillingService {
     return invoiceOutput(invoice);
   }
   async variants(actor: SessionUser, q = "") {
-    return this.db.variant.findMany({
+    const variants = await this.db.variant.findMany({
       where: {
         businessId: actor.businessId!,
         archived: false,
@@ -175,6 +176,15 @@ export class BillingService {
         },
       },
       include: {
+        reservations: {
+          where: { status: "ACTIVE", expiresAt: { gt: new Date() } },
+          select: {
+            id: true,
+            quantity: true,
+            buyerPhone: true,
+            buyerName: true,
+          },
+        },
         product: {
           select: {
             id: true,
@@ -189,6 +199,11 @@ export class BillingService {
       orderBy: { product: { name: "asc" } },
       take: 500,
     });
+    return variants.map((v) => ({
+      ...v,
+      onHandStock: v.stock,
+      stock: v.stock - v.reserved,
+    }));
   }
   async create(actor: SessionUser, body: unknown) {
     const input = parse(invoiceSchema, body);
@@ -225,6 +240,7 @@ export class BillingService {
         where: { id: actor.businessId! },
         data: { invoiceCounter: { increment: 1 }, revision: { increment: 1 } },
       });
+      activeBusiness(business);
       if (input.taxMode !== "NONE" && !business.gstNumber)
         throw new BadRequestException(
           "Add your business GSTIN before issuing a GST invoice",
@@ -286,18 +302,46 @@ export class BillingService {
       for (let index = 0; index < input.items.length; index++) {
         const item = input.items[index];
         const variant = variants.find((v) => v.id === item.variantId)!;
+        const reservation = item.reservationId
+          ? await tx.stockReservation.findFirst({
+              where: {
+                id: item.reservationId,
+                businessId: business.id,
+                variantId: variant.id,
+                buyerPhone: input.buyerPhone,
+                status: "ACTIVE",
+                expiresAt: { gt: new Date() },
+              },
+            })
+          : null;
+        if (
+          item.reservationId &&
+          (!reservation || reservation.quantity !== item.quantity)
+        )
+          throw new BadRequestException(
+            "This hold is unavailable, belongs to another buyer, or its quantity differs. Bill the full held quantity or release it first.",
+          );
+        const held = reservation?.quantity || 0;
         const result = await tx.variant.updateMany({
           where: {
             id: variant.id,
             businessId: business.id,
-            stock: { gte: item.quantity },
+            stock: { gte: item.quantity + variant.reserved - held },
           },
-          data: { stock: { decrement: item.quantity } },
+          data: {
+            stock: { decrement: item.quantity },
+            reserved: { decrement: held },
+          },
         });
         if (!result.count)
           throw new BadRequestException(
-            `Insufficient stock: ${variant.product.name} (${variant.size} / ${variant.color}). Available: ${variant.stock}`,
+            `Insufficient stock: ${variant.product.name} (${variant.size} / ${variant.color}). Available: ${variant.stock - variant.reserved}`,
           );
+        if (reservation)
+          await tx.stockReservation.update({
+            where: { id: reservation.id },
+            data: { status: "CONSUMED", invoiceId: invoice.id },
+          });
         const after = (
           await tx.variant.findUniqueOrThrow({ where: { id: variant.id } })
         ).stock;
@@ -324,6 +368,8 @@ export class BillingService {
             type: "BILLING",
             quantity: -item.quantity,
             balanceAfter: after,
+            reservedDelta: -held,
+            reservedAfter: variant.reserved - held,
             note: `Invoice ${number}`,
             reference: invoice.id,
           },
@@ -332,13 +378,16 @@ export class BillingService {
           where: { id: variant.productId },
           data: { soldUnits: { increment: item.quantity } },
         });
-        if (after <= variant.lowStockAt && variant.stock > variant.lowStockAt)
+        if (
+          after - variant.reserved + held <= variant.lowStockAt &&
+          variant.stock - variant.reserved > variant.lowStockAt
+        )
           await notify(
             tx,
             business.id,
             null,
-            "Low stock",
-            `${variant.product.name} · ${variant.size}/${variant.color}: ${after} units left`,
+            after - variant.reserved + held === 0 ? "Stock out" : "Low stock",
+            `${variant.product.name} · ${variant.size}/${variant.color}: ${after - variant.reserved + held} available units left`,
             "/dashboard/inventory",
           );
       }

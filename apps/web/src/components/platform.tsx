@@ -24,6 +24,8 @@ import type {
 } from "@/lib/types";
 import { date, errorMessage, send } from "@/lib/api";
 import { useSession } from "@/components/session";
+import { Subscription } from "./subscription";
+import { OperationsTasks } from "./operations-tasks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -348,6 +350,19 @@ export function Platform({ section = "overview" }: { section?: string }) {
                 render: (s) => (
                   <span className="font-mono text-[10px] text-muted-foreground">
                     {s.gstNumber || "Not provided"}
+                    <span className="mt-1 block">
+                      PAN: {s.panNumber || "Not provided"}
+                    </span>
+                    {s.user.uploads?.map((f) => (
+                      <a
+                        key={f.id}
+                        className="mt-1 block text-primary"
+                        href={`/api/v1/media/${f.id}`}
+                        download
+                      >
+                        {f.fileName}
+                      </a>
+                    ))}
                   </span>
                 ),
               },
@@ -563,7 +578,6 @@ export function Platform({ section = "overview" }: { section?: string }) {
           ops={ops}
           onClose={() => setBusiness(null)}
           onSaved={() => {
-            setBusiness(null);
             void mutate();
           }}
           onReview={() => {
@@ -724,6 +738,7 @@ function BusinessReview({
   onReview: () => void;
   onCatalog: () => void;
 }) {
+  const [detailTab, setDetailTab] = useState("overview");
   const [note, setNote] = useState(business.onboardingNote),
     [planId, setPlanId] = useState(business.plan.id),
     [busy, setBusy] = useState(false),
@@ -759,101 +774,129 @@ function BusinessReview({
         if (!v && !busy) onClose();
       }}
     >
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{business.name}</DialogTitle>
           <DialogDescription>
             {business.owner.name} · +91 {business.owner.phone}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 rounded-lg bg-muted/50 p-4 text-xs">
-          <div className="flex justify-between">
-            <span>Verification</span>
-            <Status value={business.verificationStatus} />
-          </div>
-          <p className="leading-5 text-muted-foreground">
-            {business.address}, {business.city}
-            <br />
-            {business.marketArea} · {business.categories.join(", ")}
-          </p>
-          <p className="font-mono text-[10px] text-muted-foreground">
-            GSTIN: {business.gstNumber || "Not provided"}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            <Pill>{business._count.products} products</Pill>
-            <Pill>{business._count.staff} staff</Pill>
-            <Pill>{business._count.invoices} bills</Pill>
-          </div>
-          {business.uploads.map((u) => (
-            <a
-              key={u.id}
-              className="flex items-center gap-1.5 text-primary"
-              href={`/api/v1/media/${u.id}`}
-              download
-            >
-              <FileCheck className="size-3" />
-              {u.fileName}
-            </a>
-          ))}
-          {business.verificationNote && (
-            <p className="text-[11px]">Review: {business.verificationNote}</p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onCatalog}>
-            <Plus />
-            Add catalog entry
-          </Button>
-          {!ops && (
-            <Button variant="outline" size="sm" onClick={onReview}>
-              <ShieldCheck />
-              Review verification
-            </Button>
-          )}
-        </div>
-        <form onSubmit={save} className="space-y-4">
-          <Field label="Onboarding / data entry note">
-            <Textarea
-              rows={3}
-              maxLength={2000}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Pending documents, catalog work and next steps"
-            />
-          </Field>
-          {!ops && (
-            <Field label="Assigned subscription plan">
-              <select
-                className="field"
-                value={planId}
-                onChange={(e) => setPlanId(e.target.value)}
-              >
-                {plans
-                  .filter((p) => p.active || p.id === business.plan.id)
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · {money(p.monthlyPricePaise, true)}/mo ·{" "}
-                      {p.staffLimit} staff
-                    </option>
-                  ))}
-              </select>
-            </Field>
-          )}
-          <FormError message={error} />
-          <DialogFooter>
+        <div className="flex flex-wrap gap-2 border-b pb-3">
+          {["overview", "tasks", ...(!ops ? ["subscription"] : [])].map((t) => (
             <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={busy}
+              key={t}
+              size="sm"
+              variant={detailTab === t ? "secondary" : "ghost"}
+              onClick={() => setDetailTab(t)}
             >
-              Close
+              {t === "overview"
+                ? "Profile & review"
+                : t === "tasks"
+                  ? "Setup tasks"
+                  : "Subscription"}
             </Button>
-            <BusyButton type="submit" busy={busy}>
-              Save operations record
-            </BusyButton>
-          </DialogFooter>
-        </form>
+          ))}
+        </div>
+        {detailTab === "tasks" && (
+          <OperationsTasks businessId={business.id} onSaved={onSaved} />
+        )}
+        {detailTab === "subscription" && !ops && (
+          <Subscription businessId={business.id} embedded onSaved={onSaved} />
+        )}
+        {detailTab === "overview" && (
+          <>
+            <div className="space-y-3 rounded-lg bg-muted/50 p-4 text-xs">
+              <div className="flex justify-between">
+                <span>Verification</span>
+                <Status value={business.verificationStatus} />
+              </div>
+              <p className="leading-5 text-muted-foreground">
+                {business.address}, {business.city}
+                <br />
+                {business.marketArea} · {business.categories.join(", ")}
+              </p>
+              <p className="font-mono text-[10px] text-muted-foreground">
+                GSTIN: {business.gstNumber || "Not provided"}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <Pill>{business._count.products} products</Pill>
+                <Pill>{business._count.staff} staff</Pill>
+                <Pill>{business._count.invoices} bills</Pill>
+              </div>
+              {business.uploads.map((u) => (
+                <a
+                  key={u.id}
+                  className="flex items-center gap-1.5 text-primary"
+                  href={`/api/v1/media/${u.id}`}
+                  download
+                >
+                  <FileCheck className="size-3" />
+                  {u.fileName}
+                </a>
+              ))}
+              {business.verificationNote && (
+                <p className="text-[11px]">
+                  Review: {business.verificationNote}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={onCatalog}>
+                <Plus />
+                Add catalog entry
+              </Button>
+              {!ops && (
+                <Button variant="outline" size="sm" onClick={onReview}>
+                  <ShieldCheck />
+                  Review verification
+                </Button>
+              )}
+            </div>
+            <form onSubmit={save} className="space-y-4">
+              <Field label="Onboarding / data entry note">
+                <Textarea
+                  rows={3}
+                  maxLength={2000}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Pending documents, catalog work and next steps"
+                />
+              </Field>
+              {!ops && (
+                <Field label="Assigned subscription plan">
+                  <select
+                    className="field"
+                    value={planId}
+                    onChange={(e) => setPlanId(e.target.value)}
+                  >
+                    {plans
+                      .filter((p) => p.active || p.id === business.plan.id)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} · {money(p.monthlyPricePaise, true)}/mo ·{" "}
+                          {p.staffLimit} staff
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+              )}
+              <FormError message={error} />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={busy}
+                >
+                  Close
+                </Button>
+                <BusyButton type="submit" busy={busy}>
+                  Save operations record
+                </BusyButton>
+              </DialogFooter>
+            </form>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -869,6 +912,9 @@ function PlanEditor({
 }) {
   const [name, setName] = useState(plan?.name || ""),
     [price, setPrice] = useState(String((plan?.monthlyPricePaise || 0) / 100)),
+    [yearlyPrice, setYearlyPrice] = useState(
+      String((plan?.yearlyPricePaise || 0) / 100),
+    ),
     [staffLimit, setStaffLimit] = useState(plan?.staffLimit || 3),
     [productLimit, setProductLimit] = useState(plan?.productLimit || 500),
     [active, setActive] = useState(plan?.active ?? true),
@@ -888,6 +934,7 @@ function PlanEditor({
         {
           name,
           monthlyPricePaise: toPaise(price),
+          yearlyPricePaise: toPaise(yearlyPrice),
           staffLimit,
           productLimit,
           active,
@@ -937,6 +984,17 @@ function PlanEditor({
               onChange={(e) => setPrice(e.target.value)}
             />
           </Field>
+          <Field
+            label="Yearly price (₹)"
+            hint="Set 0 to keep yearly collections unavailable"
+          >
+            <Input
+              required
+              inputMode="decimal"
+              value={yearlyPrice}
+              onChange={(e) => setYearlyPrice(e.target.value)}
+            />
+          </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Active staff limit">
               <Input
@@ -959,7 +1017,7 @@ function PlanEditor({
           </div>
           {[
             ["Plan available", active, setActive],
-            ["CSV bulk import", bulkImport, setBulkImport],
+            ["Excel / CSV & image import", bulkImport, setBulkImport],
             ["Extended report periods", advancedReports, setAdvancedReports],
           ].map(([label, checked, set]) => (
             <label

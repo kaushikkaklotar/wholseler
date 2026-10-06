@@ -29,17 +29,23 @@ import {
 import { Ability, AuthModule, type AuthRequest, SessionGuard } from "./auth";
 import { Database, audit, notify } from "./database";
 import { parse } from "./validation";
+import { activeBusiness } from "./business-policy";
+import { createHash } from "node:crypto";
 const productInclude = {
   variants: { where: { archived: false }, orderBy: { size: "asc" as const } },
   images: { select: { id: true } },
 } satisfies Prisma.ProductInclude;
 export const mapProduct = <
-  T extends { variants: { stock: number }[]; images: { id: string }[] },
+  T extends {
+    variants: { stock: number; reserved?: number }[];
+    images: { id: string }[];
+  },
 >(
   p: T,
 ) => ({
   ...p,
-  stock: p.variants.reduce((s, v) => s + v.stock, 0),
+  stock: p.variants.reduce((s, v) => s + v.stock - (v.reserved || 0), 0),
+  onHandStock: p.variants.reduce((s, v) => s + v.stock, 0),
   images: p.images.map((i) => ({ id: i.id, url: `/api/v1/media/${i.id}` })),
 });
 @Injectable()
@@ -102,6 +108,7 @@ export class CatalogService {
       data: { revision: { increment: 1 } },
       include: { plan: true },
     });
+    activeBusiness(business);
     const count = await tx.product.count({
       where: { businessId, moderation: { not: "ARCHIVED" } },
     });
@@ -320,7 +327,10 @@ export class CatalogService {
   }
   async import(actor: SessionUser, body: unknown) {
     const input = parse(
-      z.object({ products: z.array(productSchema).min(1).max(500) }),
+      z.object({
+        requestKey: z.string().uuid(),
+        products: z.array(productSchema).min(1).max(500),
+      }),
       body,
     );
     if (!actor.plan?.bulkImport)
@@ -339,8 +349,35 @@ export class CatalogService {
     )
       throw new BadRequestException("Group all variants under one product SKU");
     return this.db.serial(async (tx) => {
+      const hash = createHash("sha256")
+        .update(JSON.stringify(input.products))
+        .digest("hex");
+      const prior = await tx.importBatch.findUnique({
+        where: {
+          businessId_requestKey: {
+            businessId: actor.businessId!,
+            requestKey: input.requestKey,
+          },
+        },
+      });
+      if (prior) {
+        if (prior.kind !== "CATALOG" || prior.requestHash !== hash)
+          throw new BadRequestException(
+            "Import request key was used for different data",
+          );
+        return { created: prior.count };
+      }
       await this.checkCap(tx, actor.businessId!, input.products.length);
       for (const p of input.products) await this.insert(tx, actor, p);
+      await tx.importBatch.create({
+        data: {
+          businessId: actor.businessId!,
+          requestKey: input.requestKey,
+          requestHash: hash,
+          kind: "CATALOG",
+          count: input.products.length,
+        },
+      });
       await audit(
         tx,
         actor.id,
@@ -425,6 +462,11 @@ export class InventoryService {
       archived: false,
       product: { moderation: { not: "ARCHIVED" } },
     };
+    const lowIds = low
+      ? await this.db.$queryRaw<
+          { id: string }[]
+        >`SELECT v.id FROM "Variant" v WHERE v."businessId"=${actor.businessId!} AND v.stock-v.reserved<=v."lowStockAt"`
+      : [];
     const where: Prisma.VariantWhereInput = {
       ...base,
       product: {
@@ -438,7 +480,7 @@ export class InventoryService {
             }
           : {}),
       },
-      ...(low ? { stock: { lte: this.db.variant.fields.lowStockAt } } : {}),
+      ...(low ? { id: { in: lowIds.map((v) => v.id) } } : {}),
     };
     const [variants, total, stats] = await Promise.all([
       this.db.variant.findMany({
@@ -464,6 +506,7 @@ export class InventoryService {
         select: {
           stock: true,
           lowStockAt: true,
+          reserved: true,
           product: { select: { pricePaise: true } },
         },
       }),
@@ -472,8 +515,10 @@ export class InventoryService {
       variants,
       total,
       page,
-      totalUnits: stats.reduce((s, v) => s + v.stock, 0),
-      lowCount: stats.filter((v) => v.stock <= v.lowStockAt).length,
+      totalUnits: stats.reduce((s, v) => s + v.stock - v.reserved, 0),
+      reservedUnits: stats.reduce((s, v) => s + v.reserved, 0),
+      lowCount: stats.filter((v) => v.stock - v.reserved <= v.lowStockAt)
+        .length,
       stockValuePaise: stats.reduce(
         (s, v) => s + v.stock * v.product.pricePaise,
         0,
@@ -505,6 +550,11 @@ export class InventoryService {
   async move(actor: SessionUser, body: unknown) {
     const input = parse(stockSchema, body);
     return this.db.serial(async (tx) => {
+      activeBusiness(
+        await tx.business.findUniqueOrThrow({
+          where: { id: actor.businessId! },
+        }),
+      );
       const already = await tx.stockMovement.findUnique({
         where: {
           businessId_requestKey: {
@@ -539,12 +589,14 @@ export class InventoryService {
         where: {
           id: variant.id,
           businessId: actor.businessId!,
-          stock: { gte: Math.max(0, -input.quantity) },
+          stock: { gte: variant.reserved + Math.max(0, -input.quantity) },
         },
         data: { stock: { increment: input.quantity } },
       });
       if (!updated.count)
-        throw new BadRequestException("Stock cannot become negative");
+        throw new BadRequestException(
+          "Stock cannot fall below the reserved quantity. Release the hold before removing those units.",
+        );
       const balance = (
         await tx.variant.findUniqueOrThrow({ where: { id: variant.id } })
       ).stock;
@@ -557,6 +609,7 @@ export class InventoryService {
           type: input.type,
           quantity: input.quantity,
           balanceAfter: balance,
+          reservedAfter: variant.reserved,
           note: input.note,
           requestKey: input.requestKey,
         },
@@ -569,13 +622,16 @@ export class InventoryService {
         movement.id,
         `${variant.product.sku} · ${input.quantity > 0 ? "+" : ""}${input.quantity} · ${input.note}`,
       );
-      if (balance <= variant.lowStockAt && variant.stock > variant.lowStockAt)
+      if (
+        balance - variant.reserved <= variant.lowStockAt &&
+        variant.stock - variant.reserved > variant.lowStockAt
+      )
         await notify(
           tx,
           actor.businessId,
           null,
-          "Low stock",
-          `${variant.product.name} · ${variant.size}/${variant.color}: ${balance} units left`,
+          balance - variant.reserved === 0 ? "Stock out" : "Low stock",
+          `${variant.product.name} · ${variant.size}/${variant.color}: ${balance - variant.reserved} available units left`,
           "/dashboard/inventory",
         );
       return movement;
@@ -594,7 +650,12 @@ export class InventoryController {
     @Query("low") low?: string,
     @Query("page") page?: string,
   ) {
-    return this.inventory.list(req.actor, q?.slice(0, 100), low === "true");
+    return this.inventory.list(
+      req.actor,
+      q?.slice(0, 100),
+      low === "true",
+      Math.min(10000, Math.max(1, Math.floor(Number(page) || 1))),
+    );
   }
   @Get("export") @Ability("INVENTORY", "VIEW") async export(
     @Req() req: AuthRequest,
@@ -616,13 +677,24 @@ export class InventoryController {
     );
     res.send(
       csv([
-        ["SKU", "Product", "Size", "Colour", "Available units", "Low stock at"],
+        [
+          "SKU",
+          "Product",
+          "Size",
+          "Colour",
+          "Available units",
+          "On hand",
+          "Reserved",
+          "Low stock at",
+        ],
         ...variants.map((v) => [
           v.product.sku,
           v.product.name,
           v.size,
           v.color,
+          v.stock - v.reserved,
           v.stock,
+          v.reserved,
           v.lowStockAt,
         ]),
       ]),

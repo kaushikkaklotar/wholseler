@@ -42,6 +42,7 @@ import {
 } from "@wholesale/shared";
 import { Database, audit } from "./database";
 import { parse } from "./validation";
+import { businessSubscription } from "./business-policy";
 export type AuthRequest = Request & { actor: SessionUser };
 export const cookieName = () =>
   process.env.NODE_ENV === "production"
@@ -110,6 +111,7 @@ export class AuthService {
       verificationStatus:
         business?.verificationStatus ?? u.seller?.verificationStatus ?? null,
       hasGst: !!business?.gstNumber,
+      ...(business ? { subscription: businessSubscription(business) } : {}),
       permissions:
         u.role === "WHOLESALER_OWNER"
           ? modules.flatMap((m) =>
@@ -431,6 +433,20 @@ export class SessionGuard implements CanActivate {
     )
       throw new ForbiddenException(
         "You do not have permission for this action",
+      );
+    if (
+      permission &&
+      !permission.endsWith(":VIEW") &&
+      actor.subscription?.status === "EXPIRED" &&
+      ![
+        "BILLING:EDIT",
+        "BILLING:DELETE",
+        "SETTINGS:EDIT",
+        "STAFF:EDIT",
+      ].includes(permission)
+    )
+      throw new ForbiddenException(
+        "Your subscription has expired. Renew to create products, stock, staff or bills. Existing records remain accessible.",
       );
     return true;
   }

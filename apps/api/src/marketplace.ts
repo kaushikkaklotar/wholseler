@@ -25,7 +25,7 @@ const selection = {
   images: { select: { id: true } },
   variants: {
     where: { archived: false },
-    select: { size: true, color: true, stock: true },
+    select: { size: true, color: true, stock: true, reserved: true },
   },
   business: {
     select: {
@@ -44,8 +44,12 @@ export function marketplaceProduct(product: Product) {
     ...publicData,
     pricePaise: visibility === "PUBLIC" ? product.pricePaise : null,
     images: images.map((image) => ({ url: `/api/v1/media/${image.id}` })),
+    variants: product.variants.map(({ reserved, ...v }) => ({
+      ...v,
+      stock: v.stock - reserved,
+    })),
     stock: product.variants.reduce(
-      (total, variant) => total + variant.stock,
+      (total, variant) => total + variant.stock - variant.reserved,
       0,
     ),
   };

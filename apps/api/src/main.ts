@@ -13,6 +13,7 @@ import { Prisma } from "@prisma/client";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import type { Request, Response, NextFunction } from "express";
+import { json } from "express";
 import { AppModule } from "./module";
 config({
   path: path.resolve(process.env.WHOLESALE_ROOT || process.cwd(), ".env"),
@@ -22,6 +23,20 @@ config({
 class Errors implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const res = host.switchToHttp().getResponse<Response>();
+    if (
+      typeof exception === "object" &&
+      exception !== null &&
+      "type" in exception &&
+      exception.type === "entity.too.large"
+    ) {
+      res
+        .status(413)
+        .json({
+          message:
+            "Import request is too large. Use fewer rows or shorter descriptions",
+        });
+      return;
+    }
     if (exception instanceof HttpException) {
       res.status(exception.getStatus()).json({
         message:
@@ -85,7 +100,8 @@ async function bootstrap() {
   const origin = process.env.WEB_ORIGIN || "http://127.0.0.1:3000";
   if (production && !origin.startsWith("https://"))
     throw new Error("Production requires an HTTPS WEB_ORIGIN");
-  const app = await NestFactory.create(AppModule, { bodyParser: true });
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.use(json({ limit: "2mb" }));
   app.enableShutdownHooks();
   app.useGlobalFilters(new Errors());
   app.getHttpAdapter().getInstance().set("trust proxy", "loopback");

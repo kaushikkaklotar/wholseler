@@ -115,12 +115,20 @@ const businessNav: NavItem[] = [
     permission: "SETTINGS:VIEW",
     group: "BUSINESS",
   },
+  {
+    label: "Plan & subscription",
+    href: "/dashboard/subscription",
+    icon: CreditCard,
+    permission: "SETTINGS:VIEW",
+    group: "BUSINESS",
+  },
 ];
 const sellerNav: NavItem[] = [
   { label: "Discover products", href: "/seller", icon: Search },
   { label: "Saved products", href: "/seller/saved", icon: Heart },
   { label: "Suppliers", href: "/seller/suppliers", icon: Store },
   { label: "My inquiries", href: "/seller/inquiries", icon: MessageCircle },
+  { label: "Buyer profile", href: "/seller/profile", icon: ContactRound },
 ];
 const adminNav: NavItem[] = [
   { label: "Platform overview", href: "/admin", icon: LayoutDashboard },
@@ -199,7 +207,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
     ops = user.role === "PLATFORM_OPERATIONS";
   const nav = (
     seller ? sellerNav : admin ? adminNav : ops ? opsNav : businessNav
-  ).filter((n) => !n.permission || can(n.permission));
+  ).filter(
+    (n) =>
+      (!n.permission || can(n.permission)) &&
+      (n.href !== "/dashboard/subscription" ||
+        user.role === "WHOLESALER_OWNER"),
+  );
   const context = seller
     ? "Seller workspace"
     : admin
@@ -456,6 +469,25 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="app-content mx-auto max-w-[1550px] p-5 sm:p-8">
+          {user.subscription?.status === "EXPIRED" && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted p-4 text-xs">
+              <p>
+                Your subscription has expired. Existing records remain
+                available; renew to create new bills and stock entries.
+              </p>
+              <Button asChild size="sm" variant="outline">
+                <Link
+                  href={
+                    user.role === "WHOLESALER_OWNER"
+                      ? "/dashboard/subscription"
+                      : "/support?category=SUBSCRIPTION"
+                  }
+                >
+                  Renew access
+                </Link>
+              </Button>
+            </div>
+          )}
           {children}
         </main>
       </div>

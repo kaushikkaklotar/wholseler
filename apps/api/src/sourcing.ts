@@ -19,6 +19,7 @@ import { z } from "zod";
 import {
   inquirySchema,
   paymentState,
+  sellerSchema,
   type SessionUser,
 } from "@wholesale/shared";
 import {
@@ -44,11 +45,12 @@ const publicInclude = {
       deliveryInfo: true,
       description: true,
       verificationStatus: true,
+      contactPreference: true,
     },
   },
   variants: {
     where: { archived: false },
-    select: { id: true, size: true, color: true, stock: true },
+    select: { id: true, size: true, color: true, stock: true, reserved: true },
   },
   images: { select: { id: true } },
 } satisfies Prisma.ProductInclude;
@@ -80,8 +82,11 @@ export class SourcingService {
       pricePaise: show ? p.pricePaise : null,
       cartonPricePaise: show ? p.cartonPricePaise : null,
       priceAvailable: show,
-      stock: p.variants.reduce((s, v) => s + v.stock, 0),
-      variants: p.variants,
+      stock: p.variants.reduce((s, v) => s + v.stock - v.reserved, 0),
+      variants: p.variants.map(({ reserved, ...v }) => ({
+        ...v,
+        stock: v.stock - reserved,
+      })),
       images: p.images.map((i) => ({ id: i.id, url: `/api/v1/media/${i.id}` })),
       business: p.business,
       favorite: favorites.has(p.id),
@@ -115,6 +120,27 @@ export class SourcingService {
       ? Prisma.sql`(p.visibility='PUBLIC' OR (p.visibility='APPROVED_SELLERS' AND p."businessId" IN (${Prisma.join([...approved])})))`
       : Prisma.sql`p.visibility='PUBLIC'`;
     const q = query.q?.trim().slice(0, 100);
+    if (
+      query.page !== "2" &&
+      (!query.page || query.page === "1") &&
+      query.favorites !== "true" &&
+      ((q && q.length >= 3) || query.category)
+    ) {
+      const day = new Date(
+        new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(
+          new Date(),
+        ) + "T00:00:00Z",
+      );
+      await this.db.searchEvent.createMany({
+        data: {
+          sellerId,
+          query: (q || "").toLowerCase(),
+          category: query.category?.slice(0, 80) || "",
+          day,
+        },
+        skipDuplicates: true,
+      });
+    }
     if (q)
       conditions.push(
         Prisma.sql`(to_tsvector('simple',p.name || ' ' || p.sku || ' ' || p.category || ' ' || b.name || ' ' || b."marketArea") @@ websearch_to_tsquery('simple',${q}) OR p.name ILIKE ${`%${q}%`} OR p.sku ILIKE ${`%${q}%`} OR b.name ILIKE ${`%${q}%`})`,
@@ -135,7 +161,7 @@ export class SourcingService {
       );
     if (query.inStock === "true")
       conditions.push(
-        Prisma.sql`EXISTS (SELECT 1 FROM "Variant" v WHERE v."productId"=p.id AND v.archived=false AND v.stock>0)`,
+        Prisma.sql`EXISTS (SELECT 1 FROM "Variant" v WHERE v."productId"=p.id AND v.archived=false AND v.stock>v.reserved)`,
       );
     for (const key of ["minPrice", "maxPrice"] as const) {
       if (query[key] !== undefined && query[key] !== "") {
@@ -157,7 +183,7 @@ export class SourcingService {
     const where = Prisma.join(conditions, " AND ");
     const order =
       query.sort === "trending"
-        ? Prisma.sql`p."soldUnits" DESC, p."viewCount" DESC, p."createdAt" DESC, p.id`
+        ? Prisma.sql`(p."soldUnits" * 3 + p."viewCount" + COALESCE((SELECT SUM(GREATEST(sm.quantity,0)) FROM "StockMovement" sm WHERE sm."productId"=p.id AND sm."createdAt">NOW()-INTERVAL '30 days'),0) + (SELECT COUNT(*) FROM "SearchEvent" se WHERE se.category=p.category AND se."createdAt">NOW()-INTERVAL '30 days')) DESC, p."createdAt" DESC, p.id`
         : query.sort === "price"
           ? Prisma.sql`CASE WHEN ${canPrice} THEN p."pricePaise" ELSE NULL END ASC NULLS LAST, p."createdAt" DESC, p.id`
           : Prisma.sql`p."createdAt" DESC, p.id`;
@@ -286,6 +312,13 @@ export class SourcingService {
       });
       if (!product)
         throw new NotFoundException("Product is no longer available");
+      if (
+        product.business.contactPreference !== "BOTH" &&
+        product.business.contactPreference !== input.channel
+      )
+        throw new BadRequestException(
+          `This supplier prefers ${product.business.contactPreference.toLowerCase()} inquiries`,
+        );
       if (input.quantity < product.moq)
         throw new BadRequestException(
           `Minimum order quantity is ${product.moq} units`,
@@ -339,6 +372,11 @@ export class SourcingService {
     });
   }
   async suppliers(actor: SessionUser) {
+    const favorites = await this.db.supplierFavorite.findMany({
+      where: { sellerId: actor.sellerId! },
+      select: { businessId: true },
+    });
+    const saved = new Set(favorites.map((f) => f.businessId));
     const shops = await this.db.business.findMany({
       where: { verificationStatus: "VERIFIED" },
       select: {
@@ -358,7 +396,86 @@ export class SourcingService {
       orderBy: { name: "asc" },
       take: 200,
     });
-    return shops;
+    return shops.map((s) => ({ ...s, favorite: saved.has(s.id) }));
+  }
+  async saveSupplier(actor: SessionUser, id: string, body: unknown) {
+    const input = parse(z.object({ favorite: z.boolean() }), body);
+    if (
+      !(await this.db.business.findFirst({
+        where: { id, verificationStatus: "VERIFIED" },
+      }))
+    )
+      throw new NotFoundException("Verified supplier not found");
+    if (input.favorite)
+      await this.db.supplierFavorite.upsert({
+        where: {
+          businessId_sellerId: { businessId: id, sellerId: actor.sellerId! },
+        },
+        create: { businessId: id, sellerId: actor.sellerId! },
+        update: {},
+      });
+    else
+      await this.db.supplierFavorite.deleteMany({
+        where: { businessId: id, sellerId: actor.sellerId! },
+      });
+    return { ok: true };
+  }
+  async profile(actor: SessionUser) {
+    const [seller, uploads] = await Promise.all([
+      this.db.seller.findUniqueOrThrow({
+        where: { id: actor.sellerId! },
+        include: { user: { select: { name: true, phone: true } } },
+      }),
+      this.db.upload.findMany({
+        where: { userId: actor.id, kind: "KYC" },
+        select: { id: true, fileName: true },
+      }),
+    ]);
+    return { ...seller, uploads };
+  }
+  async updateProfile(actor: SessionUser, body: unknown) {
+    const { name, ...data } = parse(sellerSchema, body);
+    return this.db.serial(async (tx) => {
+      await tx.user.update({ where: { id: actor.id }, data: { name } });
+      return tx.seller.update({
+        where: { id: actor.sellerId! },
+        data: { ...data, verificationStatus: "PENDING", verificationNote: "" },
+      });
+    });
+  }
+  async rankings() {
+    const rows = await this.db.$queryRaw<
+      {
+        category: string;
+        products: bigint;
+        views: bigint;
+        sold: bigint;
+        stockMovement: bigint;
+        searches: bigint;
+      }[]
+    >`
+      SELECT p.category, COUNT(*) AS products, SUM(p."viewCount") AS views, SUM(p."soldUnits") AS sold,
+      COALESCE((SELECT SUM(GREATEST(sm.quantity,0)) FROM "StockMovement" sm JOIN "Product" mp ON mp.id=sm."productId" JOIN "Business" mb ON mb.id=mp."businessId"
+        WHERE mp.category=p.category AND mp.moderation='APPROVED' AND mb."verificationStatus"='VERIFIED' AND sm."createdAt">NOW()-INTERVAL '30 days'),0) AS "stockMovement",
+      (SELECT COUNT(*) FROM "SearchEvent" se WHERE (se.category=p.category OR (se.category='' AND se.query=LOWER(p.category))) AND se."createdAt">NOW()-INTERVAL '30 days') AS searches
+      FROM "Product" p JOIN "Business" b ON b.id=p."businessId" WHERE p.moderation='APPROVED' AND b."verificationStatus"='VERIFIED' GROUP BY p.category`;
+    return rows
+      .map((r) => ({
+        category: r.category,
+        products: Number(r.products),
+        views: Number(r.views),
+        sold: Number(r.sold),
+        stockMovement: Number(r.stockMovement),
+        searches: Number(r.searches),
+        score:
+          Number(r.sold) * 3 +
+          Number(r.views) +
+          Number(r.stockMovement) +
+          Number(r.searches),
+      }))
+      .sort(
+        (a, b) => b.score - a.score || a.category.localeCompare(b.category),
+      );
   }
   async buyers(actor: SessionUser) {
     const [inquiries, invoices, access] = await Promise.all([
@@ -517,6 +634,25 @@ export class SellerController {
     @Query() query: Record<string, string | undefined>,
   ) {
     return this.service.discover(req.actor, query);
+  }
+  @Get("categories") categories() {
+    return this.service.rankings();
+  }
+  @Get("profile") profile(@Req() req: AuthRequest) {
+    return this.service.profile(req.actor);
+  }
+  @Patch("profile") saveProfile(
+    @Req() req: AuthRequest,
+    @Body() body: unknown,
+  ) {
+    return this.service.updateProfile(req.actor, body);
+  }
+  @Post("suppliers/:id/favorite") saveSupplier(
+    @Req() req: AuthRequest,
+    @Param("id") id: string,
+    @Body() body: unknown,
+  ) {
+    return this.service.saveSupplier(req.actor, id, body);
   }
   @Get("products/:id") product(
     @Req() req: AuthRequest,

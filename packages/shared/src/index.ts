@@ -83,6 +83,11 @@ export const gstSchema = z
     (v) => !v || /^\d{2}[A-Z]{5}\d{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/.test(v),
     "Enter a valid GSTIN",
   );
+export const panSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .refine((v) => !v || /^[A-Z]{5}\d{4}[A-Z]$/.test(v), "Enter a valid PAN");
 export const requestOtpSchema = z.object({
   phone: phoneSchema,
   accountType: z
@@ -103,6 +108,8 @@ export const businessSchema = z.object({
   marketArea: text(2, 100),
   categories: z.array(text()).min(1).max(12),
   gstNumber: gstSchema.default(""),
+  panNumber: panSchema.default(""),
+  contactPreference: z.enum(["BOTH", "CALL", "WHATSAPP"]).default("BOTH"),
   moq: z.number().int().min(1).max(100000).default(1),
   deliveryInfo: text(0, 300).default(""),
   description: text(0, 1000).default(""),
@@ -116,6 +123,22 @@ export const sellerSchema = z.object({
   businessName: text(2, 100),
   city: text(2, 80),
   gstNumber: gstSchema.default(""),
+  panNumber: panSchema.default(""),
+  marketplaceChannels: z
+    .array(
+      z.enum([
+        "Amazon",
+        "Meesho",
+        "Flipkart",
+        "Ajio",
+        "Shopify",
+        "Instagram",
+        "Offline",
+        "Other",
+      ]),
+    )
+    .max(8)
+    .default([]),
 });
 export const variantSchema = z.object({
   id: z.string().optional(),
@@ -203,6 +226,7 @@ export const invoiceSchema = z
           variantId: text(),
           quantity: z.number().int().min(1).max(100000),
           unitPricePaise: amount.min(1),
+          reservationId: text().optional(),
         }),
       )
       .min(1)
@@ -300,6 +324,7 @@ export const inquirySchema = z.object({
 export const planSchema = z.object({
   name: text(2, 60),
   monthlyPricePaise: amount,
+  yearlyPricePaise: amount.default(0),
   productLimit: z.number().int().min(1).max(100000),
   staffLimit: z.number().int().min(1).max(1000),
   active: z.boolean().default(true),
@@ -320,6 +345,11 @@ export type SessionUser = {
   verificationStatus: string | null;
   hasGst?: boolean;
   onboardingRequired: boolean;
+  subscription?: {
+    status: "TRIAL" | "ACTIVE" | "EXPIRED";
+    startsAt: string;
+    endsAt: string;
+  };
   plan?: {
     name: string;
     staffLimit: number;

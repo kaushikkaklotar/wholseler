@@ -31,6 +31,8 @@ type BusinessDraft = {
   marketArea: string;
   categories: string[];
   gstNumber: string;
+  panNumber: string;
+  contactPreference?: string;
   moq: number;
   deliveryInfo: string;
   description: string;
@@ -129,6 +131,27 @@ function BusinessFields({
             onChange={(e) => update("gstNumber", e.target.value.toUpperCase())}
             placeholder="15 character GSTIN"
           />
+        </Field>
+        <Field label="PAN (optional)">
+          <Input
+            maxLength={10}
+            disabled={disabled}
+            value={draft.panNumber || ""}
+            onChange={(e) => update("panNumber", e.target.value.toUpperCase())}
+            placeholder="ABCDE1234F"
+          />
+        </Field>
+        <Field label="Preferred buyer contact">
+          <select
+            className="field"
+            disabled={disabled}
+            value={draft.contactPreference || "BOTH"}
+            onChange={(e) => update("contactPreference", e.target.value)}
+          >
+            <option value="BOTH">Call & WhatsApp</option>
+            <option value="CALL">Call only</option>
+            <option value="WHATSAPP">WhatsApp only</option>
+          </select>
         </Field>
         <Field label="Minimum order quantity">
           <Input

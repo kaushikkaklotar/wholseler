@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { setTimeout } from "node:timers/promises";
+import { queueDelivery, type DeliveryTopic } from "./delivery-queue";
 
 @Injectable()
 export class Database
@@ -65,7 +66,34 @@ export async function notify(
   body: string,
   href: string,
 ) {
-  await tx.notification.create({
+  const notification = await tx.notification.create({
     data: { businessId, userId, title, body, href, readBy: [] },
   });
+  const topic: DeliveryTopic | null = /stock/i.test(title)
+    ? "stockAlerts"
+    : /inquir/i.test(title)
+      ? "inquiryAlerts"
+      : null;
+  if (topic) {
+    const recipientId =
+      userId ||
+      (businessId
+        ? (
+            await tx.business.findUnique({
+              where: { id: businessId },
+              select: { ownerId: true },
+            })
+          )?.ownerId
+        : null);
+    if (recipientId)
+      await queueDelivery(tx, {
+        businessId,
+        userId: recipientId,
+        topic,
+        key: notification.id,
+        title,
+        body,
+        href,
+      });
+  }
 }

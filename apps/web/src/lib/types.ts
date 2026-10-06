@@ -5,6 +5,7 @@ export type Plan = {
   id: string;
   name: string;
   monthlyPricePaise: number;
+  yearlyPricePaise: number;
   productLimit: number;
   staffLimit: number;
   bulkImport: boolean;
@@ -16,6 +17,7 @@ export type Variant = {
   size: string;
   color: string;
   stock: number;
+  reserved?: number;
   lowStockAt: number;
 };
 export type Product = {
@@ -38,6 +40,13 @@ export type Product = {
   createdAt: string;
 };
 export type BillVariant = Variant & {
+  onHandStock?: number;
+  reservations?: {
+    id: string;
+    quantity: number;
+    buyerPhone: string;
+    buyerName: string;
+  }[];
   product: {
     id: string;
     name: string;
@@ -179,6 +188,8 @@ export type Supplier = {
   moq: number;
   deliveryInfo: string;
   verificationStatus: string;
+  favorite?: boolean;
+  contactPreference?: string;
   _count?: { products: number };
 };
 export type SellerProduct = Omit<
@@ -226,6 +237,7 @@ export type Buyer = {
 };
 export type BusinessSettings = Supplier & {
   gstNumber: string;
+  panNumber: string;
   invoicePrefix: string;
   verificationNote: string;
   plan: Plan;
@@ -259,9 +271,15 @@ export type PlatformSeller = {
   businessName: string;
   city: string;
   gstNumber: string;
+  panNumber: string;
+  marketplaceChannels: string[];
   verificationStatus: string;
   verificationNote: string;
-  user: { name: string; phone: string };
+  user: {
+    name: string;
+    phone: string;
+    uploads?: { id: string; fileName: string }[];
+  };
   createdAt: string;
 };
 export type PlatformProduct = Omit<Product, "variants"> & {

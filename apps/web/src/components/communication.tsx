@@ -8,6 +8,7 @@ import { Bell, CheckCheck, CircleHelp, Plus, Send } from "lucide-react";
 import type { Ticket } from "@/lib/types";
 import { date, errorMessage, send, time } from "@/lib/api";
 import { useSession } from "@/components/session";
+import { NotificationSettings } from "./notification-settings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -374,6 +375,7 @@ export function Notifications() {
           ) : undefined
         }
       />
+      <NotificationSettings />
       {error ? (
         <ErrorState
           error={error}

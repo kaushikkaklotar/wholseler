@@ -110,15 +110,17 @@ export class ReportingService {
       ).length,
       outstandingPaise: outputs.reduce((s, i) => s + i.duePaise, 0),
       productCount,
-      stockUnits: variants.reduce((s, v) => s + v.stock, 0),
-      lowStockCount: variants.filter((v) => v.stock <= v.lowStockAt).length,
+      stockUnits: variants.reduce((s, v) => s + v.stock - v.reserved, 0),
+      lowStockCount: variants.filter(
+        (v) => v.stock - v.reserved <= v.lowStockAt,
+      ).length,
       daily,
       recentInvoices: actor.permissions.includes("BILLING:VIEW")
         ? outputs.slice(0, 5)
         : [],
       lowStock: actor.permissions.includes("INVENTORY:VIEW")
         ? variants
-            .filter((v) => v.stock <= v.lowStockAt)
+            .filter((v) => v.stock - v.reserved <= v.lowStockAt)
             .sort((a, b) => a.stock - b.stock)
             .slice(0, 5)
         : [],
@@ -242,12 +244,14 @@ export class ReportingService {
       outstandingPaise: outputs.reduce((s, i) => s + i.duePaise, 0),
       invoiceCount: outputs.filter((i) => i.status !== "CANCELLED").length,
       inquiryCount: inquiries,
-      stockUnits: variants.reduce((s, v) => s + v.stock, 0),
+      stockUnits: variants.reduce((s, v) => s + v.stock - v.reserved, 0),
       stockValuePaise: variants.reduce(
         (s, v) => s + v.stock * v.product.pricePaise,
         0,
       ),
-      lowStockCount: variants.filter((v) => v.stock <= v.lowStockAt).length,
+      lowStockCount: variants.filter(
+        (v) => v.stock - v.reserved <= v.lowStockAt,
+      ).length,
       topProducts: [...products.values()]
         .sort((a, b) => b.salesPaise - a.salesPaise)
         .slice(0, 10),

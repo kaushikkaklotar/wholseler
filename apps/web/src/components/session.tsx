@@ -30,10 +30,22 @@ function SessionState({ children }: { children: React.ReactNode }) {
         loading: isLoading,
         error,
         refresh: () => mutate(),
-        can: (p) => user?.permissions.includes(p) ?? false,
+        can: (p) =>
+          !!user?.permissions.includes(p) &&
+          (user.subscription?.status !== "EXPIRED" ||
+            p.endsWith(":VIEW") ||
+            [
+              "BILLING:EDIT",
+              "BILLING:DELETE",
+              "SETTINGS:EDIT",
+              "STAFF:EDIT",
+            ].includes(p)),
       }}
     >
-      <SWRConfig key={user?.id ?? "public"} value={{ provider: () => new Map() }}>
+      <SWRConfig
+        key={user?.id ?? "public"}
+        value={{ provider: () => new Map() }}
+      >
         {children}
       </SWRConfig>
     </SessionContext.Provider>

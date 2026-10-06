@@ -23,6 +23,7 @@ import {
 import { categories, money } from "@wholesale/shared";
 import type { Inquiry, SellerProduct, Supplier } from "@/lib/types";
 import { date, errorMessage, send } from "@/lib/api";
+import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,7 +69,15 @@ export function Discover({ saved = false }: { saved?: boolean }) {
     [minPrice, setMinPrice] = useState(""),
     [maxPrice, setMaxPrice] = useState(""),
     [page, setPage] = useState(1);
-  const key = `/seller/discover?${new URLSearchParams({ q: query, category, city, market, inStock: String(inStock), sort, favorites: String(saved), minPrice, maxPrice, page: String(page) })}`;
+  const searchQuery = useDebouncedValue(query);
+  const { data: rankings } =
+    useSWR<{ category: string; products: number; score: number }[]>(
+      "/seller/categories",
+    );
+  const categoryNames = [
+    ...new Set([...(rankings || []).map((r) => r.category), ...categories]),
+  ];
+  const key = `/seller/discover?${new URLSearchParams({ q: searchQuery, category, city, market, inStock: String(inStock), sort, favorites: String(saved), minPrice, maxPrice, page: String(page) })}`;
   const { data, error, mutate } = useSWR<Discovery>(key, {
     refreshInterval: 15000,
   });
@@ -142,7 +151,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
             }}
           >
             <option value="">All categories</option>
-            {categories.map((c) => (
+            {categoryNames.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
@@ -535,11 +544,18 @@ export function SellerProductDetail({ id }: { id: string }) {
                 ))}
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Button onClick={() => setChannel("WHATSAPP")}>
+                <Button
+                  disabled={product.business.contactPreference === "CALL"}
+                  onClick={() => setChannel("WHATSAPP")}
+                >
                   <MessageCircle />
                   Contact on WhatsApp
                 </Button>
-                <Button variant="outline" onClick={() => setChannel("CALL")}>
+                <Button
+                  disabled={product.business.contactPreference === "WHATSAPP"}
+                  variant="outline"
+                  onClick={() => setChannel("CALL")}
+                >
                   <Phone />
                   Call supplier
                 </Button>
@@ -724,13 +740,39 @@ function ContactDialog({
 }
 export function Suppliers() {
   const { data, error, mutate } = useSWR<Supplier[]>("/seller/suppliers");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(""),
+    [savedOnly, setSavedOnly] = useState(false);
+  async function saveSupplier(b: Supplier) {
+    try {
+      await send(`/seller/suppliers/${b.id}/favorite`, {
+        favorite: !b.favorite,
+      });
+      await mutate();
+      toast.success(
+        b.favorite
+          ? "Supplier removed from saved list"
+          : "Supplier saved. Choose new-arrival alerts in Notifications.",
+      );
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
+  }
   return (
     <>
       <PageHeader
         title="Wholesale suppliers"
         description="Find verified businesses and explore their available catalogs."
       />
+      <div className="mb-4">
+        <Button
+          size="sm"
+          variant={savedOnly ? "secondary" : "outline"}
+          onClick={() => setSavedOnly((v) => !v)}
+        >
+          <Heart />
+          {savedOnly ? "Saved suppliers" : "Show saved suppliers"}
+        </Button>
+      </div>
       <div className="relative mb-6 max-w-sm">
         <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
         <Input
@@ -753,6 +795,7 @@ export function Suppliers() {
       ) : (
         <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
           {data
+            .filter((b) => !savedOnly || b.favorite)
             .filter((b) =>
               `${b.name} ${b.categories.join(" ")} ${b.marketArea} ${b.city}`
                 .toLowerCase()
@@ -769,7 +812,22 @@ export function Suppliers() {
                         {b.marketArea}, {b.city}
                       </p>
                     </div>
-                    <ShieldCheck className="ml-auto size-4 text-emerald-600" />
+                    <Button
+                      className="ml-auto"
+                      size="icon-sm"
+                      variant="ghost"
+                      aria-label={`${b.favorite ? "Unsave" : "Save"} supplier ${b.name}`}
+                      onClick={() => {
+                        void saveSupplier(b);
+                      }}
+                    >
+                      <Heart
+                        className={
+                          b.favorite ? "fill-primary text-primary" : ""
+                        }
+                      />
+                    </Button>
+                    <ShieldCheck className="size-4 text-emerald-600" />
                   </div>
                   <p className="text-xs leading-6 text-muted-foreground">
                     {b.description ||

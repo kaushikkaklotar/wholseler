@@ -13,11 +13,14 @@ import {
   Search,
   Warehouse,
   AlertTriangle,
+  Upload,
+  LockKeyhole,
 } from "lucide-react";
 import { money } from "@wholesale/shared";
 import type { StockVariant } from "@/lib/types";
 import { date, errorMessage, send, time } from "@/lib/api";
 import { useSession } from "@/components/session";
+import { ReservationList, ReserveStock, StockImport } from "./stock-tools";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,6 +49,7 @@ import {
 type InventoryData = {
   variants: StockVariant[];
   totalUnits: number;
+  reservedUnits: number;
   total: number;
   lowCount: number;
   stockValuePaise: number;
@@ -55,6 +59,8 @@ type Movement = {
   type: string;
   quantity: number;
   balanceAfter: number;
+  reservedDelta: number;
+  reservedAfter: number;
   note: string;
   reference: string | null;
   createdAt: string;
@@ -64,7 +70,9 @@ type Movement = {
 };
 export function Inventory() {
   const params = useSearchParams(),
-    { can } = useSession();
+    { can, user } = useSession();
+  const [importOpen, setImportOpen] = useState(false),
+    [reserve, setReserve] = useState<StockVariant | null>(null);
   const [query, setQuery] = useState(params.get("q") || ""),
     [low, setLow] = useState(params.get("low") === "true"),
     [tab, setTab] = useState(params.get("variantId") ? "ledger" : "stock"),
@@ -93,15 +101,23 @@ export function Inventory() {
         title="Inventory"
         description="Know what’s available. See exactly how stock moved."
         actions={
-          <Button variant="outline" asChild>
-            <a
-              href={`/api/v1/inventory/export?q=${encodeURIComponent(query)}&low=${low}`}
-              download
-            >
-              <Download />
-              Export stock
-            </a>
-          </Button>
+          <>
+            {can("INVENTORY:EDIT") && user?.plan?.bulkImport && (
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload />
+                Bulk stock upload
+              </Button>
+            )}
+            <Button variant="outline" asChild>
+              <a
+                href={`/api/v1/inventory/export?q=${encodeURIComponent(query)}&low=${low}`}
+                download
+              >
+                <Download />
+                Export stock
+              </a>
+            </Button>
+          </>
         }
       />
       {error ? (
@@ -120,7 +136,7 @@ export function Inventory() {
               label="Available units"
               value={data.totalUnits.toLocaleString("en-IN")}
               icon={<Warehouse />}
-              detail="Across active variants"
+              detail={`${data.reservedUnits} reserved · across active variants`}
             />
             <Metric
               label="Low stock variants"
@@ -141,6 +157,7 @@ export function Inventory() {
                 <TabsList>
                   <TabsTrigger value="stock">Stock levels</TabsTrigger>
                   <TabsTrigger value="ledger">Movement ledger</TabsTrigger>
+                  <TabsTrigger value="holds">Buyer holds</TabsTrigger>
                 </TabsList>
               </Tabs>
               {tab === "stock" ? (
@@ -191,7 +208,14 @@ export function Inventory() {
                 </div>
               )}
             </div>
-            {tab === "stock" ? (
+            {tab === "holds" ? (
+              <ReservationList
+                onChanged={() => {
+                  void mutate();
+                  void refreshLedger();
+                }}
+              />
+            ) : tab === "stock" ? (
               <DataTable<StockVariant>
                 rows={data.variants}
                 pageSize={20}
@@ -243,7 +267,10 @@ export function Inventory() {
                     label: "Available units",
                     render: (v) => (
                       <span className="numeric text-sm font-semibold">
-                        {v.stock.toLocaleString()}
+                        {(v.stock - (v.reserved || 0)).toLocaleString()}
+                        <span className="block text-[10px] font-normal text-muted-foreground">
+                          {v.stock} on hand · {v.reserved || 0} held
+                        </span>
                       </span>
                     ),
                   },
@@ -253,17 +280,17 @@ export function Inventory() {
                     render: (v) => (
                       <Pill
                         tone={
-                          v.stock === 0
+                          v.stock - (v.reserved || 0) === 0
                             ? "danger"
-                            : v.stock <= v.lowStockAt
+                            : v.stock - (v.reserved || 0) <= v.lowStockAt
                               ? "warning"
                               : "success"
                         }
                         dot
                       >
-                        {v.stock === 0
+                        {v.stock - (v.reserved || 0) === 0
                           ? "Out of stock"
-                          : v.stock <= v.lowStockAt
+                          : v.stock - (v.reserved || 0) <= v.lowStockAt
                             ? "Low stock"
                             : "Healthy"}
                       </Pill>
@@ -286,6 +313,15 @@ export function Inventory() {
                             >
                               <ArrowDownToLine className="size-3.5" />
                               Add
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={v.stock - (v.reserved || 0) <= 0}
+                              aria-label={`Reserve ${v.product.name} ${v.size} ${v.color}`}
+                              onClick={() => setReserve(v)}
+                            >
+                              <LockKeyhole />
                             </Button>
                             <Button
                               variant="ghost"
@@ -380,6 +416,12 @@ export function Inventory() {
                         >
                           {m.quantity > 0 ? "+" : ""}
                           {m.quantity}
+                          {!!m.reservedDelta && (
+                            <span className="block text-[10px]">
+                              Hold {m.reservedDelta > 0 ? "+" : ""}
+                              {m.reservedDelta}
+                            </span>
+                          )}
                         </span>
                       ),
                     },
@@ -434,6 +476,27 @@ export function Inventory() {
             )}
           </Panel>
         </>
+      )}
+      {importOpen && (
+        <StockImport
+          onClose={() => setImportOpen(false)}
+          onSaved={() => {
+            setImportOpen(false);
+            void mutate();
+            void refreshLedger();
+          }}
+        />
+      )}
+      {reserve && (
+        <ReserveStock
+          variant={reserve}
+          onClose={() => setReserve(null)}
+          onSaved={() => {
+            setReserve(null);
+            void mutate();
+            void refreshLedger();
+          }}
+        />
       )}
       {move && (
         <MovementDialog

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Inject,
@@ -19,11 +20,12 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
   GetObjectCommand,
+  DeleteObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import type { Request, Response } from "express";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import sharp from "sharp";
@@ -150,6 +152,32 @@ export class MediaService {
       fileName: upload.fileName,
     };
   }
+  async discard(actor: SessionUser, id: string) {
+    const record = await this.db.upload.findFirst({
+      where: { id, userId: actor.id, kind: "PRODUCT", productId: null },
+    });
+    if (!record) return { ok: true };
+    if (!/^[a-zA-Z0-9_.-]+$/.test(record.storageKey))
+      throw new BadRequestException("Invalid upload");
+    const removed = await this.db.upload.deleteMany({
+      where: { id, userId: actor.id, productId: null },
+    });
+    if (!removed.count) return { ok: true };
+    if (this.s3)
+      await this.s3.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.S3_BUCKET,
+          Key: record.storageKey,
+        }),
+      );
+    else
+      await unlink(path.join(this.localRoot, record.storageKey)).catch(
+        (e: NodeJS.ErrnoException) => {
+          if (e.code !== "ENOENT") throw e;
+        },
+      );
+    return { ok: true };
+  }
   async read(id: string, req: Request, res: Response) {
     const record = await this.db.upload.findUnique({
       where: { id },
@@ -250,6 +278,12 @@ export class MediaController {
       };
     }
     return this.media.upload(actor, file, kind || "PRODUCT");
+  }
+  @Delete("media/:id") @UseGuards(SessionGuard) discard(
+    @Req() req: AuthRequest,
+    @Param("id") id: string,
+  ) {
+    return this.media.discard(req.actor, id);
   }
   @Get("media/:id") read(
     @Param("id") id: string,

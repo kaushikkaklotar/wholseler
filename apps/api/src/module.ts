@@ -10,6 +10,11 @@ import { PlatformModule } from "./platform";
 import { CommunicationModule } from "./communication";
 import { MediaModule } from "./media";
 import { MarketplaceModule } from "./marketplace";
+import { SubscriptionModule } from "./subscriptions";
+import { ReservationModule } from "./reservations";
+import { StockImportModule } from "./stock-import";
+import { OperationsModule } from "./operations";
+import { DeliveryModule } from "./notification-delivery";
 @Controller("v1")
 class SystemController {
   constructor(@Inject(Database) private readonly db: Database) {}
@@ -44,6 +49,11 @@ class SystemController {
     CommunicationModule,
     MediaModule,
     MarketplaceModule,
+    SubscriptionModule,
+    ReservationModule,
+    StockImportModule,
+    OperationsModule,
+    DeliveryModule,
   ],
   controllers: [SystemController],
 })

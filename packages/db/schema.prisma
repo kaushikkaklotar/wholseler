@@ -37,6 +37,8 @@ enum MovementType {
   CANCELLATION
   ADJUSTMENT
   STOCK_OUT
+  RESERVATION
+  RELEASE
 }
 enum InvoiceStatus {
   ISSUED
@@ -73,6 +75,8 @@ model User {
   notifications Notification[]
   tickets SupportTicket[]
   ticketMessages TicketMessage[]
+  notificationPreference NotificationPreference?
+  assignedTasks OnboardingTask[] @relation("TaskAssignee")
   payments Payment[]
   returns InvoiceReturn[]
   uploads Upload[]
@@ -104,6 +108,7 @@ model Plan {
   id String @id @default(cuid())
   name String @unique
   monthlyPricePaise Int
+  yearlyPricePaise Int @default(0)
   productLimit Int
   staffLimit Int
   bulkImport Boolean @default(false)
@@ -122,12 +127,18 @@ model Business {
   marketArea String
   categories String[]
   gstNumber String @default("")
+  panNumber String @default("")
+  contactPreference String @default("BOTH")
   description String @default("")
   moq Int @default(1)
   deliveryInfo String @default("")
   verificationStatus Verification @default(PENDING)
   verificationNote String @default("")
   onboardingNote String @default("")
+  onboardingStage String @default("NEW")
+  subscriptionStartsAt DateTime @default(now())
+  subscriptionEndsAt DateTime @default(dbgenerated("(CURRENT_TIMESTAMP + '30 days'::interval)"))
+  subscriptionTrial Boolean @default(true)
   invoicePrefix String @default("WH")
   invoiceCounter Int @default(0)
   revision Int @default(0)
@@ -149,6 +160,12 @@ model Business {
   tickets SupportTicket[]
   payments Payment[]
   returns InvoiceReturn[]
+  subscriptionPeriods SubscriptionPeriod[]
+  reservations StockReservation[]
+  onboardingTasks OnboardingTask[]
+  savedBy SupplierFavorite[]
+  deliveries NotificationDelivery[]
+  importBatches ImportBatch[]
   @@index([verificationStatus,city])
 }
 model Staff {
@@ -170,6 +187,8 @@ model Seller {
   businessName String
   city String
   gstNumber String @default("")
+  panNumber String @default("")
+  marketplaceChannels String[] @default([])
   verificationStatus Verification @default(PENDING)
   verificationNote String @default("")
   createdAt DateTime @default(now())
@@ -178,6 +197,8 @@ model Seller {
   favorites Favorite[]
   supplierAccess SellerAccess[]
   productViews ProductView[]
+  savedSuppliers SupplierFavorite[]
+  searches SearchEvent[]
   @@index([verificationStatus])
 }
 model SellerAccess {
@@ -197,6 +218,7 @@ model Product {
   sku String
   category String
   description String @default("")
+  publishedAt DateTime?
   pricePaise Int
   cartonPricePaise Int?
   cartonUnits Int @default(12)
@@ -237,6 +259,7 @@ model Variant {
   size String
   color String
   stock Int @default(0)
+  reserved Int @default(0)
   lowStockAt Int @default(10)
   archived Boolean @default(false)
   createdAt DateTime @default(now())
@@ -244,6 +267,7 @@ model Variant {
   product Product @relation(fields:[productId],references:[id])
   movements StockMovement[]
   invoiceItems InvoiceItem[]
+  reservations StockReservation[]
   @@unique([productId,size,color])
   @@index([businessId,archived,stock])
 }
@@ -256,6 +280,8 @@ model StockMovement {
   type MovementType
   quantity Int
   balanceAfter Int
+  reservedDelta Int @default(0)
+  reservedAfter Int @default(0)
   note String @default("")
   reference String?
   requestKey String?
@@ -455,4 +481,135 @@ model TicketMessage {
   createdAt DateTime @default(now())
   ticket SupportTicket @relation(fields:[ticketId],references:[id])
   user User @relation(fields:[userId],references:[id])
+}
+
+model SubscriptionPeriod {
+  id String @id @default(cuid())
+  businessId String
+  requestKey String
+  requestHash String
+  planId String
+  planName String
+  cycle String
+  startsAt DateTime
+  endsAt DateTime
+  amountPaise Int
+  paymentMode String
+  paymentReference String
+  note String @default("")
+  actorId String
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id],onDelete:Cascade)
+  @@unique([businessId,requestKey])
+  @@index([businessId,createdAt])
+}
+
+model StockReservation {
+  id String @id @default(cuid())
+  businessId String
+  variantId String
+  actorId String
+  requestKey String
+  requestHash String
+  buyerName String
+  buyerPhone String
+  quantity Int
+  note String
+  status String @default("ACTIVE")
+  expiresAt DateTime
+  invoiceId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields:[businessId],references:[id],onDelete:Cascade)
+  variant Variant @relation(fields:[variantId],references:[id],onDelete:Cascade)
+  @@unique([businessId,requestKey])
+  @@index([status,expiresAt])
+  @@index([businessId,buyerPhone,status])
+}
+
+model ImportBatch {
+  id String @id @default(cuid())
+  businessId String
+  requestKey String
+  requestHash String
+  kind String
+  count Int
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id],onDelete:Cascade)
+  @@unique([businessId,requestKey])
+}
+
+model OnboardingTask {
+  id String @id @default(cuid())
+  businessId String
+  title String
+  category String
+  status String @default("TODO")
+  assigneeId String?
+  dueAt DateTime?
+  note String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  business Business @relation(fields:[businessId],references:[id],onDelete:Cascade)
+  assignee User? @relation("TaskAssignee",fields:[assigneeId],references:[id],onDelete:SetNull)
+  @@index([businessId,status])
+}
+
+model SupplierFavorite {
+  id String @id @default(cuid())
+  businessId String
+  sellerId String
+  createdAt DateTime @default(now())
+  business Business @relation(fields:[businessId],references:[id],onDelete:Cascade)
+  seller Seller @relation(fields:[sellerId],references:[id],onDelete:Cascade)
+  @@unique([businessId,sellerId])
+}
+
+model SearchEvent {
+  id String @id @default(cuid())
+  sellerId String
+  query String
+  category String
+  day DateTime @db.Date
+  createdAt DateTime @default(now())
+  seller Seller @relation(fields:[sellerId],references:[id],onDelete:Cascade)
+  @@unique([sellerId,query,category,day])
+  @@index([category,createdAt])
+}
+
+model NotificationPreference {
+  userId String @id
+  sms Boolean @default(false)
+  whatsapp Boolean @default(false)
+  email Boolean @default(false)
+  emailAddress String @default("")
+  newArrivals Boolean @default(false)
+  stockAlerts Boolean @default(false)
+  inquiryAlerts Boolean @default(false)
+  paymentReminders Boolean @default(false)
+  updatedAt DateTime @updatedAt
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+
+model NotificationDelivery {
+  id String @id @default(cuid())
+  businessId String?
+  userId String
+  dedupeKey String @unique
+  topic String
+  channel String
+  recipient String
+  title String
+  body String
+  href String
+  status String @default("QUEUED")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  claimedAt DateTime?
+  deliveredAt DateTime?
+  lastError String @default("")
+  createdAt DateTime @default(now())
+  business Business? @relation(fields:[businessId],references:[id],onDelete:Cascade)
+  @@index([status,nextAttemptAt])
+  @@index([userId,createdAt])
 }

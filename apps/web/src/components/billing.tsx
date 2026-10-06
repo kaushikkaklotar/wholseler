@@ -246,7 +246,12 @@ export function Billing() {
     </>
   );
 }
-type CartLine = { variant: BillVariant; quantity: number; price: string };
+type CartLine = {
+  variant: BillVariant;
+  quantity: number;
+  price: string;
+  reservationId?: string;
+};
 export function NewBill() {
   const router = useRouter(),
     params = useSearchParams(),
@@ -274,6 +279,22 @@ export function NewBill() {
     error: variantsError,
     mutate,
   } = useSWR<BillVariant[]>(`/billing/variants?q=${encodeURIComponent(query)}`);
+  const holdId = params.get("reservationId");
+  function addHold(
+    variant: BillVariant,
+    reservation: NonNullable<BillVariant["reservations"]>[number],
+  ) {
+    setCart((lines) => [
+      ...lines.filter((l) => l.variant.id !== variant.id),
+      {
+        variant: { ...variant, stock: reservation.quantity },
+        quantity: reservation.quantity,
+        price: String(variant.product.pricePaise / 100),
+        reservationId: reservation.id,
+      },
+    ]);
+    toast.success("Buyer hold added to this bill");
+  }
   let totals = {
       subtotalPaise: 0,
       discountPaise: 0,
@@ -363,6 +384,7 @@ export function NewBill() {
           variantId: l.variant.id,
           quantity: l.quantity,
           unitPricePaise: toPaise(l.price),
+          ...(l.reservationId ? { reservationId: l.reservationId } : {}),
         })),
         discountPaise: toPaise(discount || "0"),
         taxMode,
@@ -422,6 +444,36 @@ export function NewBill() {
                 />
               </div>
               <div className="scrollbar-thin max-h-[270px] overflow-y-auto border-t">
+                {!!buyerPhone &&
+                  variants?.some((v) =>
+                    v.reservations?.some((r) => r.buyerPhone === buyerPhone),
+                  ) && (
+                    <div className="space-y-2 border-b bg-muted/40 p-4">
+                      <p className="text-xs font-medium">
+                        {holdId
+                          ? "Select the buyer hold to add it to this bill"
+                          : "This buyer’s held stock"}
+                      </p>
+                      {variants.flatMap((v) =>
+                        (v.reservations || [])
+                          .filter((r) => r.buyerPhone === buyerPhone)
+                          .map((r) => (
+                            <Button
+                              key={r.id}
+                              type="button"
+                              size="sm"
+                              variant={
+                                r.id === holdId ? "secondary" : "outline"
+                              }
+                              onClick={() => addHold(v, r)}
+                            >
+                              {v.product.sku} · {v.size}/{v.color} · Bill{" "}
+                              {r.quantity} held units
+                            </Button>
+                          )),
+                      )}
+                    </div>
+                  )}
                 {variantsError ? (
                   <ErrorState
                     error={variantsError}
@@ -507,6 +559,11 @@ export function NewBill() {
                             </p>
                             <p className="mt-1 text-[10px] text-muted-foreground">
                               {l.variant.size} · {l.variant.color}
+                              {l.reservationId && (
+                                <span className="ml-2 text-primary">
+                                  Buyer hold · full quantity
+                                </span>
+                              )}
                             </p>
                           </td>
                           <td className="px-2">
@@ -515,7 +572,7 @@ export function NewBill() {
                                 type="button"
                                 variant="ghost"
                                 size="icon-xs"
-                                disabled={l.quantity <= 1}
+                                disabled={!!l.reservationId || l.quantity <= 1}
                                 aria-label={`Reduce quantity of ${l.variant.product.name}`}
                                 onClick={() =>
                                   lineChange(l.variant.id, {
@@ -531,6 +588,7 @@ export function NewBill() {
                                 type="number"
                                 min={1}
                                 max={l.variant.stock}
+                                readOnly={!!l.reservationId}
                                 required
                                 value={l.quantity}
                                 onChange={(e) =>
@@ -543,7 +601,10 @@ export function NewBill() {
                                 type="button"
                                 variant="ghost"
                                 size="icon-xs"
-                                disabled={l.quantity >= l.variant.stock}
+                                disabled={
+                                  !!l.reservationId ||
+                                  l.quantity >= l.variant.stock
+                                }
                                 aria-label={`Increase quantity of ${l.variant.product.name}`}
                                 onClick={() =>
                                   lineChange(l.variant.id, {
@@ -640,9 +701,10 @@ export function NewBill() {
                     pattern="[6-9][0-9]{9}"
                     maxLength={10}
                     value={buyerPhone}
-                    onChange={(e) =>
-                      setBuyerPhone(e.target.value.replace(/\D/g, ""))
-                    }
+                    onChange={(e) => {
+                      setBuyerPhone(e.target.value.replace(/\D/g, ""));
+                      setCart((lines) => lines.filter((l) => !l.reservationId));
+                    }}
                     placeholder="10 digit mobile"
                   />
                 </Field>
@@ -806,6 +868,18 @@ export function NewBill() {
   );
 }
 export function InvoiceDetail({ id }: { id: string }) {
+  const [reminderBusy, setReminderBusy] = useState(false);
+  async function reminder() {
+    setReminderBusy(true);
+    try {
+      await send(`/billing/invoices/${id}/reminder`, {});
+      toast.success("Reminder queued for the opted-in buyer");
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setReminderBusy(false);
+    }
+  }
   const { can } = useSession();
   const {
     data: invoice,
@@ -841,6 +915,19 @@ export function InvoiceDetail({ id }: { id: string }) {
           actions={
             <>
               <Status value={invoice.paymentStatus} />
+              {can("BILLING:EDIT") &&
+                invoice.status === "ISSUED" &&
+                invoice.duePaise > 0 && (
+                  <BusyButton
+                    busy={reminderBusy}
+                    variant="outline"
+                    onClick={() => {
+                      void reminder();
+                    }}
+                  >
+                    Queue payment reminder
+                  </BusyButton>
+                )}
               <Button variant="outline" onClick={() => window.print()}>
                 <Printer />
                 Print invoice

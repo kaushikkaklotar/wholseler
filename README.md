@@ -2,17 +2,21 @@
 
 A document aligned B2B wholesale operating system for textile and apparel markets. It connects catalog, live inventory, counter billing, seller sourcing and platform operations in one multi tenant application.
 
-## Implemented MVP
+## Phase 1 implementation
 
 - Public marketplace homepage, product search and detail pages; only approved products from verified businesses are published
 - Separate wholesaler and buyer registration/sign-in, team sign-in, mobile OTP with resend cooldown, and three-step onboarding
 - Five workspaces: wholesaler owner, staff, seller (buyer/retailer), platform admin and platform operations
 - OTP authentication, server enforced roles and module permissions
-- Product catalog with variants, MOQ, pricing visibility, photos, moderation, duplication and CSV import
+- Product catalog with variants, MOQ, pricing visibility, photos, moderation, duplication and Excel/CSV import with image ZIP mapping
+- Buyer stock holds with expiry, consumption at billing, available/on-hand/reserved balances and Excel/CSV stock batches
 - Signed inventory ledger for opening, purchase, stock out, billing, returns, cancellation and adjustments
 - Atomic PostgreSQL billing with stock guards, idempotent requests, buyer snapshots, GST modes, payments, returns and printable invoices
 - Seller discovery, favorites, supplier profiles, pricing approval, WhatsApp/call leads and inquiry conversion
-- Staff limits, configurable plans, KYC files, approvals, audit log, notifications and support tickets
+- Staff limits, monthly/yearly subscription periods and manual collection receipts, expiry enforcement and renewals
+- Saved suppliers, category demand ranking, buyer profiles and optional GST/PAN/KYC
+- Configurable plans, approvals, assigned onboarding tasks, audit log, notifications and support tickets
+- Opt-in email, SMS and WhatsApp delivery queue for new arrivals, stock/inquiry updates and manual unpaid-invoice reminders
 - Daily and monthly reports for sales, products, staff, inquiries and stock movements
 
 The exact report mapping and current limits are in [docs/requirements.md](docs/requirements.md).
@@ -43,6 +47,7 @@ npm run typecheck
 npm run lint
 npm test
 npm run test:integration
+npm run test:phase1
 npm run build
 ```
 
@@ -57,3 +62,13 @@ node scripts/create-admin.mjs --phone 9876543210 --name "Platform Admin"
 ```
 
 Launch also needs database backups, real supplier onboarding, DLT/SMS approval, storage credentials, moderation operations and tax/accounting review. Payroll, Telegram import, disputes, Tally/Zoho, AI and logistics integrations remain later phases from the research report.
+
+## Notifications and subscription operations
+
+Notifications are opt-in per topic and channel on `/notifications`. `NOTIFICATION_MODE=local` records delivery jobs without making provider requests; the UI explicitly shows that delivery is unavailable. For live delivery configure Resend and/or MSG91 approved flows and/or Meta approved WhatsApp templates from `.env.example`, then set `NOTIFICATION_MODE=live`. OTP configuration is separate from notification flows. SMS flows have TITLE, MESSAGE, LINK variables; WhatsApp templates have three body parameters in that order. Verify provider acceptance and actual delivery with a consenting test recipient before launch.
+
+`ACCEPTED` means the provider acknowledged the request, not that a device received it. Known transient failures retry at most three attempts. Timeouts or a worker crash leave `UNKNOWN`: check the provider dashboard before any manual retry, to avoid duplicate messages. Unsubscribed users and unfollowed suppliers are checked again before sending. Payment reminders are requested explicitly from an unpaid invoice; automated credit due-date reminders belong to Phase 2.
+
+Owners view their subscription and collection history at `/dashboard/subscription`. Platform admins record payments already received (monthly/yearly, amount, method and reference). No gateway payment is implied. New businesses receive a 30-day trial; migration gives existing businesses a 30-day grace period. Expiry blocks new bills/catalog/stock/team growth but permits record viewing, existing payment recording, returns/cancellation, settings and stock hold release. Paid renewal extends an existing paid term, or starts now after trial/expiry. Every renewal preserves its original plan/price snapshot.
+
+See [docs/requirements.md](docs/requirements.md) for scope and the launch checklist.

@@ -20,6 +20,7 @@ import { Database, audit, notify } from "./database";
 import { parse } from "./validation";
 import { CatalogModule, CatalogService } from "./catalog";
 import { actions, modules } from "@wholesale/shared";
+import { queueArrivalDeliveries } from "./delivery-queue";
 const reviewSchema = z
   .object({
     status: z.enum(["PENDING", "VERIFIED", "REJECTED", "SUSPENDED"]),
@@ -76,7 +77,18 @@ export class PlatformService {
           take: 500,
         }),
         this.db.seller.findMany({
-          include: { user: { select: { name: true, phone: true } } },
+          include: {
+            user: {
+              select: {
+                name: true,
+                phone: true,
+                uploads: {
+                  where: { kind: "KYC" },
+                  select: { id: true, fileName: true },
+                },
+              },
+            },
+          },
           orderBy: { createdAt: "desc" },
           take: 500,
         }),
@@ -222,7 +234,13 @@ export class PlatformService {
         );
       const result = await tx.product.update({
         where: { id },
-        data: { moderation: input.status, moderationNote: input.note },
+        data: {
+          moderation: input.status,
+          moderationNote: input.note,
+          ...(input.status === "APPROVED" && !p.publishedAt
+            ? { publishedAt: new Date() }
+            : {}),
+        },
       });
       await audit(
         tx,
@@ -240,6 +258,43 @@ export class PlatformService {
         `${p.name}: ${input.status.toLowerCase()}. ${input.note}`,
         "/dashboard/products",
       );
+      const business = await tx.business.findUniqueOrThrow({
+        where: { id: p.businessId },
+      });
+      if (
+        input.status === "APPROVED" &&
+        !p.publishedAt &&
+        business.verificationStatus === "VERIFIED"
+      ) {
+        const subscribers = await tx.supplierFavorite.findMany({
+          where: { businessId: p.businessId },
+          include: { seller: { select: { userId: true } } },
+        });
+        const title = `New arrival · ${business.name}`,
+          body = `${p.name} (${p.sku}) is now available in the supplier catalog.`,
+          href = `/seller/products/${p.id}`;
+        if (subscribers.length) {
+          const userIds = subscribers.map((saved) => saved.seller.userId);
+          await tx.notification.createMany({
+            data: userIds.map((userId) => ({
+              businessId: null,
+              userId,
+              title,
+              body,
+              href,
+              readBy: [],
+            })),
+          });
+          await queueArrivalDeliveries(tx, {
+            businessId: p.businessId,
+            productId: p.id,
+            userIds,
+            title,
+            body,
+            href,
+          });
+        }
+      }
       return result;
     });
   }
