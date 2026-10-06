@@ -98,7 +98,29 @@ export function Dashboard() {
           </span>
         </div>
       )}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {!data.sampleWorkspace &&
+        data.productCount === 0 &&
+        user?.role === "WHOLESALER_OWNER" && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-5 rounded-xl border border-primary/20 bg-secondary p-5">
+            <div>
+              <h2 className="text-base font-semibold">
+                Your workspace is ready. Start with your catalog.
+              </h2>
+              <p className="mt-2 max-w-xl text-xs leading-6 text-muted-foreground">
+                Add your first product, its sizes and colours, and opening
+                stock. Then create a bill or invite your staff. Your public
+                supplier profile appears after platform approval.
+              </p>
+            </div>
+            <Button asChild>
+              <Link href="/dashboard/products">
+                Open product catalog
+                <ArrowRight />
+              </Link>
+            </Button>
+          </div>
+        )}
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 min-[1100px]:grid-cols-4">
         <Metric
           label="Today's sales"
           value={money(data.todaySalesPaise, true)}
@@ -131,7 +153,7 @@ export function Dashboard() {
           detail="Recorded invoice balances"
         />
       </div>
-      <div className="mb-6 grid gap-5 xl:grid-cols-[1.7fr_1fr]">
+      <div className="mb-6 grid gap-5 min-[1100px]:grid-cols-[1.7fr_1fr]">
         <Panel
           title="Sales overview"
           description="Net sales, after returns and cancellations"
@@ -209,7 +231,7 @@ export function Dashboard() {
           )}
         </Panel>
       </div>
-      <div className="grid gap-5 xl:grid-cols-[1.7fr_1fr]">
+      <div className="grid gap-5 min-[1100px]:grid-cols-[1.7fr_1fr]">
         <Panel
           title="Recent invoices"
           description="The latest activity at your counter"
