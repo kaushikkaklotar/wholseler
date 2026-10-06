@@ -33,7 +33,9 @@ function SessionState({ children }: { children: React.ReactNode }) {
         can: (p) => user?.permissions.includes(p) ?? false,
       }}
     >
-      {children}
+      <SWRConfig key={user?.id ?? "public"} value={{ provider: () => new Map() }}>
+        {children}
+      </SWRConfig>
     </SessionContext.Provider>
   );
 }
