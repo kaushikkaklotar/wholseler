@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
@@ -67,6 +67,14 @@ export function Onboarding() {
     [step, setStep] = useState(0),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const previousStep = useRef(step);
+  useEffect(() => {
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    stepHeading.current?.focus({ preventScroll: true });
+    stepHeading.current?.scrollIntoView({ block: "start" });
+  }, [step]);
   const update = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
   useEffect(() => {
@@ -217,7 +225,11 @@ export function Onboarding() {
         </aside>
         <section className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
           <p className="text-xs text-muted-foreground">Step {step + 1} of 3</p>
-          <h2 className="mb-2 mt-3 text-2xl font-semibold tracking-tight">
+          <h2
+            ref={stepHeading}
+            tabIndex={-1}
+            className="mb-2 mt-3 scroll-mt-6 text-2xl font-semibold tracking-tight outline-none"
+          >
             {steps[step]}
           </h2>
           <p className="mb-7 text-sm text-muted-foreground">
