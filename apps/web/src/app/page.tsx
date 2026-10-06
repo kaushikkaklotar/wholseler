@@ -1,4 +1,4 @@
-import { Login } from "@/components/login";
+import { MarketplaceHome } from "@/components/marketplace";
 export default function Page() {
-  return <Login />;
+  return <MarketplaceHome />;
 }

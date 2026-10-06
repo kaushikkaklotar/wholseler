@@ -88,6 +88,8 @@ export const requestOtpSchema = z.object({
   accountType: z
     .enum(["WHOLESALER_OWNER", "SELLER"])
     .default("WHOLESALER_OWNER"),
+  intent: z.enum(["LOGIN", "REGISTER"]).default("LOGIN"),
+  portal: z.enum(["WHOLESALER", "SELLER", "TEAM"]).default("WHOLESALER"),
 });
 export const verifyOtpSchema = z.object({
   challengeId: text(),

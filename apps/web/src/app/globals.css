@@ -29,6 +29,11 @@
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 :root {
+  --market-background: #faf9f6;
+  --market-hero: #f1efe9;
+  --market-category: #f7f6f2;
+  --entry-background: #f8f8f6;
+  --entry-story: #242137;
   --background: #f7f8fa;
   --foreground: #202330;
   --card: #fff;
@@ -64,6 +69,29 @@ a {
 }
 .numeric {
   font-variant-numeric: tabular-nums;
+}
+.market-page {
+  background: var(--market-background);
+}
+.market-hero {
+  background: var(--market-hero);
+}
+.hero-category {
+  background: var(--market-category);
+}
+.hero-category:nth-child(2),
+.hero-category:nth-child(3) {
+  background: var(--secondary);
+}
+.entry-page {
+  background: var(--entry-background);
+}
+.entry-story {
+  background: var(--entry-story);
+  color: var(--color-primary-foreground);
+}
+.market-page section[id] {
+  scroll-margin-top: 6rem;
 }
 .app-content {
   animation: appear 0.18s ease-out;

@@ -9,6 +9,7 @@ import { ReportingModule } from "./reporting";
 import { PlatformModule } from "./platform";
 import { CommunicationModule } from "./communication";
 import { MediaModule } from "./media";
+import { MarketplaceModule } from "./marketplace";
 @Controller("v1")
 class SystemController {
   constructor(@Inject(Database) private readonly db: Database) {}
@@ -42,6 +43,7 @@ class SystemController {
     PlatformModule,
     CommunicationModule,
     MediaModule,
+    MarketplaceModule,
   ],
   controllers: [SystemController],
 })

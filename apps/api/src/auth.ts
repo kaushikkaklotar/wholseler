@@ -138,6 +138,45 @@ export class AuthService {
   }
   async request(body: unknown) {
     const input = parse(requestOtpSchema, body);
+    const expectedType =
+      input.portal === "SELLER" ? "SELLER" : "WHOLESALER_OWNER";
+    if (
+      input.accountType !== expectedType ||
+      (input.portal === "TEAM" && input.intent === "REGISTER")
+    )
+      throw new BadRequestException("Choose a valid account type");
+    const existing = await this.db.user.findUnique({
+      where: { phone: input.phone },
+    });
+    if (input.intent === "REGISTER" && existing)
+      throw new BadRequestException(
+        "This mobile number is already registered. Sign in to your existing account.",
+      );
+    if (input.intent === "LOGIN") {
+      if (!existing)
+        throw new BadRequestException(
+          "No account found for this number. Create an account to get started.",
+        );
+      const allowed: readonly string[] =
+        input.portal === "SELLER"
+          ? ["SELLER"]
+          : input.portal === "TEAM"
+            ? ["WHOLESALER_STAFF", "PLATFORM_ADMIN", "PLATFORM_OPERATIONS"]
+            : ["WHOLESALER_OWNER", "WHOLESALER_STAFF"];
+      if (!allowed.includes(existing.role))
+        throw new BadRequestException(
+          "This account belongs to a different workspace. Use buyer or team sign in.",
+        );
+      if (existing.disabled)
+        throw new ForbiddenException("This account is suspended");
+    }
+    if (
+      !developmentAuth() &&
+      (!process.env.MSG91_AUTH_KEY || !process.env.MSG91_TEMPLATE_ID)
+    )
+      throw new ServiceUnavailableException(
+        "SMS login is not configured. Contact the platform administrator",
+      );
     const code = String(randomInt(100000, 1000000));
     const challenge = await this.db.serial(async (tx) => {
       const now = new Date();
@@ -166,6 +205,8 @@ export class AuthService {
         data: {
           phone: input.phone,
           accountType: input.accountType,
+          intent: input.intent,
+          portal: input.portal,
           codeHash: otpHash(input.phone, code),
           expiresAt: new Date(now.getTime() + 300000),
         },
@@ -252,15 +293,36 @@ export class AuthService {
       });
       if (!used.count)
         throw new UnauthorizedException("This code has already been used");
-      const user = await tx.user.upsert({
+      const existing = await tx.user.findUnique({
         where: { phone: challenge.phone },
-        create: {
-          phone: challenge.phone,
-          name: "New member",
-          role: challenge.accountType,
-        },
-        update: {},
       });
+      if (challenge.intent === "REGISTER" && existing)
+        throw new BadRequestException(
+          "This number is now registered. Sign in instead.",
+        );
+      if (challenge.intent === "LOGIN" && !existing)
+        throw new UnauthorizedException(
+          "Account unavailable. Create an account first.",
+        );
+      const allowed =
+        challenge.portal === "SELLER"
+          ? ["SELLER"]
+          : challenge.portal === "TEAM"
+            ? ["WHOLESALER_STAFF", "PLATFORM_ADMIN", "PLATFORM_OPERATIONS"]
+            : ["WHOLESALER_OWNER", "WHOLESALER_STAFF"];
+      if (existing && !allowed.includes(existing.role))
+        throw new ForbiddenException(
+          "This account belongs to a different workspace",
+        );
+      const user =
+        existing ??
+        (await tx.user.create({
+          data: {
+            phone: challenge.phone,
+            name: "New member",
+            role: challenge.accountType,
+          },
+        }));
       if (user.disabled)
         throw new ForbiddenException("This account is suspended");
       await tx.session.create({

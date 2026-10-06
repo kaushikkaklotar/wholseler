@@ -92,6 +92,8 @@ model OtpChallenge {
   codeHash String?
   providerId String?
   accountType Role
+  intent String @default("LOGIN")
+  portal String @default("WHOLESALER")
   attempts Int @default(0)
   consumedAt DateTime?
   expiresAt DateTime

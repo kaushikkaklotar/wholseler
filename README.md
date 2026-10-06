@@ -4,7 +4,9 @@ A document aligned B2B wholesale operating system for textile and apparel market
 
 ## Implemented MVP
 
-- Five workspaces: wholesaler owner, staff, seller, platform admin and platform operations
+- Public marketplace homepage, product search and detail pages; only approved products from verified businesses are published
+- Separate wholesaler and buyer registration/sign-in, team sign-in, mobile OTP with resend cooldown, and three-step onboarding
+- Five workspaces: wholesaler owner, staff, seller (buyer/retailer), platform admin and platform operations
 - OTP authentication, server enforced roles and module permissions
 - Product catalog with variants, MOQ, pricing visibility, photos, moderation, duplication and CSV import
 - Signed inventory ledger for opening, purchase, stock out, billing, returns, cancellation and adjustments
@@ -31,6 +33,8 @@ npm run dev
 ```
 
 Open `http://127.0.0.1:3000`. Development mode shows one sample account for every role and exposes the local OTP inside the login screen. It does not send an SMS.
+
+The homepage is public. Wholesalers sign in at `/login/wholesaler` or create an account at `/register/wholesaler`. Buyers use `/login/buyer` and `/register/buyer`. Staff and platform members use `/login/team`. Local demo accounts are under the expandable login section. Signing in no longer creates accounts; registration is explicit. Buyer product references survive sign-in and onboarding.
 
 ## Verification
 

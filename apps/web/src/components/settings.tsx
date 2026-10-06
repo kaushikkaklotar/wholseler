@@ -1,15 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
-import { Check, FileCheck, LogOut, Store, Upload } from "lucide-react";
+import { Check, FileCheck, Upload } from "lucide-react";
 import { businessSchema, categories, money } from "@wholesale/shared";
 import type { BusinessSettings } from "@/lib/types";
 import { api, errorMessage, send } from "@/lib/api";
-import { home, useSession } from "@/components/session";
-import { Brand } from "@/components/brand";
+import { useSession } from "@/components/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -384,146 +382,6 @@ function SettingsForm({
           </div>
         </Panel>
       </div>
-    </div>
-  );
-}
-export function Onboarding() {
-  const { user, loading, error, refresh } = useSession(),
-    router = useRouter();
-  const [draft, setDraft] = useState<BusinessDraft>({
-      name: "",
-      phone: user?.phone || "",
-      address: "",
-      city: "Surat",
-      marketArea: "",
-      categories: ["Kurtis"],
-      gstNumber: "",
-      moq: 1,
-      deliveryInfo: "",
-      description: "",
-      invoicePrefix: "WH",
-    }),
-    [name, setName] = useState(""),
-    [sellerBusiness, setSellerBusiness] = useState(""),
-    [city, setCity] = useState(""),
-    [gst, setGst] = useState(""),
-    [busy, setBusy] = useState(false),
-    [formError, setFormError] = useState("");
-  useEffect(() => {
-    if (!loading && error?.status === 401) router.replace("/login");
-    if (user && !user.onboardingRequired) router.replace(home(user));
-  }, [user, loading, error, router]);
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    setFormError("");
-    try {
-      const seller = user?.role === "SELLER";
-      await send(
-        "/auth/onboard",
-        seller
-          ? { name, businessName: sellerBusiness, city, gstNumber: gst }
-          : { ...draft, phone: draft.phone || user?.phone, ownerName: name },
-      );
-      const session = await refresh();
-      if (session) router.replace(home(session));
-    } catch (e) {
-      setFormError(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  if (loading)
-    return (
-      <div className="mx-auto max-w-4xl p-10">
-        <Loading />
-      </div>
-    );
-  if (!user) return null;
-  return (
-    <div className="mx-auto max-w-4xl px-5 py-8">
-      <header className="mb-10 flex items-center justify-between">
-        <Brand />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={async () => {
-            await send("/auth/logout", {});
-            try {
-              await refresh();
-            } catch {}
-            router.replace("/login");
-          }}
-        >
-          <LogOut />
-          Sign out
-        </Button>
-      </header>
-      <PageHeader
-        title={
-          user.role === "SELLER"
-            ? "Set up your sourcing profile"
-            : "Set up your wholesale business"
-        }
-        description="A few details help connect your catalog, billing and market profile."
-      />
-      <Panel>
-        <form className="space-y-5 p-6" onSubmit={save}>
-          <Field label="Your name" required>
-            <Input
-              required
-              minLength={2}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoFocus
-            />
-          </Field>
-          {user.role === "SELLER" ? (
-            <>
-              <Field label="Business / store name" required>
-                <Input
-                  required
-                  minLength={2}
-                  value={sellerBusiness}
-                  onChange={(e) => setSellerBusiness(e.target.value)}
-                />
-              </Field>
-              <Field label="City" required>
-                <Input
-                  required
-                  minLength={2}
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                />
-              </Field>
-              <Field label="GSTIN (optional)">
-                <Input
-                  maxLength={15}
-                  value={gst}
-                  onChange={(e) => setGst(e.target.value.toUpperCase())}
-                />
-              </Field>
-            </>
-          ) : (
-            <BusinessFields
-              draft={{ ...draft, phone: draft.phone || user.phone }}
-              setDraft={setDraft}
-            />
-          )}
-          <FormError message={formError} />
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
-            <p className="max-w-md text-[11px] leading-5 text-muted-foreground">
-              {user.role === "SELLER"
-                ? "Seller discovery is free. Contact suppliers directly for commercial terms."
-                : "New businesses start on the available entry plan. Your public profile enters platform verification."}
-            </p>
-            <BusyButton busy={busy} type="submit">
-              <Store />
-              Create workspace
-            </BusyButton>
-          </div>
-        </form>
-      </Panel>
     </div>
   );
 }

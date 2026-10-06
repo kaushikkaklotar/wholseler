@@ -1,55 +1,98 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import {
+  ArrowLeft,
   ArrowRight,
   Check,
   ShieldCheck,
-  Sparkles,
   Smartphone,
+  Store,
 } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BusyButton, Field, FormError, Pill } from "@/components/common";
+import { BusyButton, Field, FormError } from "@/components/common";
 import { home, useSession } from "@/components/session";
 import { errorMessage, send } from "@/lib/api";
+import { buyerDestination } from "@/lib/auth-entry";
 import type { Role, SessionUser } from "@wholesale/shared";
-type Config = {
-  development: boolean;
-  accounts: { name: string; phone: string; role: Role }[];
+type Portal = "WHOLESALER" | "SELLER" | "TEAM";
+type Challenge = {
+  challengeId: string;
+  expiresIn: number;
+  developmentCode?: string;
 };
-const roleLabel: Record<Role, string> = {
+const labels: Record<Role, string> = {
   WHOLESALER_OWNER: "Owner",
   WHOLESALER_STAFF: "Staff",
-  SELLER: "Seller",
+  SELLER: "Buyer",
   PLATFORM_ADMIN: "Admin",
   PLATFORM_OPERATIONS: "Operations",
 };
-export function Login() {
+export function Login({
+  portal = "WHOLESALER",
+  register = false,
+}: {
+  portal?: Portal;
+  register?: boolean;
+}) {
   const router = useRouter(),
-    { user, refresh } = useSession();
-  const { data: config } = useSWR<Config>("/config");
+    params = useSearchParams(),
+    { user, refresh, loading } = useSession();
+  const next = params.get("next"),
+    buyer = portal === "SELLER",
+    team = portal === "TEAM";
+  const route = team
+    ? "/login/team"
+    : buyer
+      ? "/login/buyer"
+      : "/login/wholesaler";
+  const other = `${register ? route : buyer ? "/register/buyer" : "/register/wholesaler"}${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+  const { data: config } = useSWR<{
+    development: boolean;
+    accounts: { name: string; phone: string; role: Role }[];
+  }>("/config");
   const [phone, setPhone] = useState(""),
-    [accountType, setAccountType] = useState("WHOLESALER_OWNER"),
-    [challenge, setChallenge] = useState<{
-      challengeId: string;
-      developmentCode?: string;
-    } | null>(null),
+    [challenge, setChallenge] = useState<Challenge | null>(null),
     [code, setCode] = useState(""),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [resendAt, setResendAt] = useState(0),
+    [seconds, setSeconds] = useState(0);
   useEffect(() => {
-    if (user) router.replace(home(user));
-  }, [user, router]);
-  async function request(event: React.FormEvent) {
-    event.preventDefault();
+    if (user)
+      router.replace(
+        user.onboardingRequired
+          ? `/onboarding${next ? `?next=${encodeURIComponent(next)}` : ""}`
+          : buyerDestination(user, next) || home(user),
+      );
+  }, [user, router, next]);
+  useEffect(() => {
+    if (!resendAt) return;
+    const tick = () =>
+      setSeconds(Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [resendAt]);
+  async function request(event?: React.FormEvent) {
+    event?.preventDefault();
     setBusy(true);
     setError("");
     try {
-      setChallenge(await send("/auth/request", { phone, accountType }));
+      setChallenge(
+        await send<Challenge>("/auth/request", {
+          phone,
+          accountType: buyer ? "SELLER" : "WHOLESALER_OWNER",
+          portal,
+          intent: register ? "REGISTER" : "LOGIN",
+        }),
+      );
       setCode("");
+      setResendAt(Date.now() + 60000);
     } catch (e) {
       setError(errorMessage(e));
     } finally {
@@ -66,237 +109,304 @@ export function Login() {
         code,
       });
       await refresh();
-      router.replace(home(signed));
+      router.replace(
+        signed.onboardingRequired
+          ? `/onboarding${next ? `?next=${encodeURIComponent(next)}` : ""}`
+          : buyerDestination(signed, next) || home(signed),
+      );
     } catch (e) {
       setError(errorMessage(e));
     } finally {
       setBusy(false);
     }
   }
+  const title = challenge
+    ? "Check your phone."
+    : register
+      ? buyer
+        ? "Your next supplier starts here."
+        : "Let’s set up your business."
+      : team
+        ? "Your team workspace."
+        : buyer
+          ? "Welcome back, buyer."
+          : "Welcome back, wholesaler.";
   return (
-    <div className="min-h-screen bg-[#fafafa]">
-      <div className="mx-auto max-w-[1360px] px-6 py-7 sm:px-10">
-        <header className="flex items-center justify-between">
+    <div className="entry-page min-h-screen">
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 lg:px-10">
+        <Link href="/" aria-label="Wholseler home">
           <Brand />
-          <Pill tone="primary">Wholesale, in control</Pill>
-        </header>
-        <main className="grid min-h-[calc(100vh-160px)] items-center gap-12 py-10 lg:grid-cols-[1.15fr_1fr]">
-          <div className="max-w-[620px]">
-            <div className="mb-7 flex items-center gap-2 text-xs font-medium text-primary">
-              <span className="size-1.5 rounded-full bg-primary" />
-              BUILT FOR THE WHOLESALE COUNTER
-            </div>
-            <h1 className="text-4xl font-semibold leading-[1.1] tracking-[-1.8px] sm:text-[58px]">
-              Your business.
-              <br />
-              One connected
-              <br />
-              <span className="text-primary">workspace.</span>
-            </h1>
-            <p className="mt-7 max-w-[430px] text-[15px] leading-7 text-muted-foreground">
-              From your first catalog entry to the last bill of the day. Keep
-              products, stock, buyers and your team moving together.
-            </p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        </Link>
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/marketplace">
+            <ArrowLeft />
+            Marketplace
+          </Link>
+        </Button>
+      </header>
+      <main className="mx-auto grid max-w-7xl gap-12 px-5 py-8 lg:min-h-[calc(100vh-160px)] lg:grid-cols-2 lg:items-center lg:px-10 lg:py-12">
+        <section className="entry-story relative hidden overflow-hidden rounded-3xl p-10 lg:block">
+          <p className="text-xs font-semibold uppercase tracking-[.18em] text-white/60">
+            {buyer
+              ? "A better way to source"
+              : "Built for your wholesale business"}
+          </p>
+          <h1 className="mt-8 max-w-md text-5xl font-semibold leading-[1.12] tracking-[-2px]">
+            {buyer ? (
+              <>
+                Find the right products.
+                <br />
+                <span className="text-white/50">
+                  Know who you’re buying from.
+                </span>
+              </>
+            ) : (
+              <>
+                Less counter chaos.
+                <br />
+                <span className="text-white/50">More business, together.</span>
+              </>
+            )}
+          </h1>
+          <p className="mt-7 max-w-sm text-sm leading-7 text-white/70">
+            {buyer
+              ? "Browse published catalogs, shortlist products and speak directly with wholesale suppliers."
+              : "One place for your catalog, every stock movement, your team and the bills that keep your business moving."}
+          </p>
+          <div className="mt-12 space-y-4 border-t border-white/15 pt-7">
+            {(buyer
+              ? [
+                  "Search by product, category and city",
+                  "See MOQ and available variants",
+                  "Contact suppliers on WhatsApp or call",
+                ]
+              : [
+                  "Manage products, sizes and colours",
+                  "Create bills with stock kept in sync",
+                  "Give your staff the right access",
+                ]
+            ).map((text) => (
+              <p
+                key={text}
+                className="flex items-center gap-3 text-sm text-white/80"
+              >
+                <Check className="size-4 shrink-0" />
+                {text}
+              </p>
+            ))}
+          </div>
+          <div className="mt-12 flex items-center gap-3 text-xs text-white/60">
+            <ShieldCheck className="size-5" />
+            Mobile verification. Separate business workspaces.
+          </div>
+        </section>
+        <section className="mx-auto w-full max-w-md pb-8">
+          {!challenge && !team && (
+            <div
+              className="mb-9 grid grid-cols-2 gap-2 rounded-xl border bg-card p-1.5"
+              aria-label="Choose your workspace"
+            >
               {[
-                ["Catalog & stock", "Every variant, accounted for."],
-                ["Counter billing", "Bill fast. Stock stays in sync."],
-                ["Seller sourcing", "Connect directly with buyers."],
-              ].map(([title, text]) => (
-                <div key={title}>
-                  <Check className="mb-2 size-4 text-primary" />
-                  <h2 className="text-xs font-semibold">{title}</h2>
-                  <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                    {text}
-                  </p>
-                </div>
+                [
+                  "WHOLESALER",
+                  "Wholesaler",
+                  register ? "/register/wholesaler" : "/login/wholesaler",
+                ],
+                [
+                  "SELLER",
+                  "Buyer / retailer",
+                  register ? "/register/buyer" : "/login/buyer",
+                ],
+              ].map(([value, label, href]) => (
+                <Link
+                  key={value}
+                  href={`${href}${next ? `?next=${encodeURIComponent(next)}` : ""}`}
+                  aria-current={value === portal ? "page" : undefined}
+                  className={`rounded-lg px-3 py-3 text-center text-sm font-medium ${value === portal ? "bg-secondary text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  {label}
+                </Link>
               ))}
             </div>
-            <div className="mt-12 flex items-center gap-3 border-t pt-6 text-xs text-muted-foreground">
-              <ShieldCheck className="size-5 text-primary" />
-              Separate workspaces. The right access for every role.
-            </div>
+          )}
+          <div className="mb-5 flex size-12 items-center justify-center rounded-2xl border bg-card text-primary">
+            {challenge ? <Smartphone /> : <Store />}
           </div>
-          <div className="mx-auto w-full max-w-[430px]">
-            <div className="panel p-7 sm:p-9">
-              <div className="mb-6 flex size-11 items-center justify-center rounded-xl bg-violet-50 text-primary">
-                <Smartphone className="size-5" />
-              </div>
-              <h2 className="text-[23px] font-semibold tracking-tight">
-                {challenge ? "Verify your mobile" : "Welcome to Wholseler"}
-              </h2>
-              <p className="mb-6 mt-2 text-xs leading-5 text-muted-foreground">
-                {challenge
-                  ? `Enter the 6 digit code for +91 ${phone}. It expires in five minutes.`
-                  : "Sign in with your mobile number. New members can create a business or seller profile."}
-              </p>
-              <form
-                onSubmit={challenge ? verify : request}
-                className="space-y-5"
-              >
-                {!challenge ? (
-                  <>
-                    <div className="flex rounded-lg bg-muted p-1">
-                      {[
-                        ["WHOLESALER_OWNER", "Wholesaler"],
-                        ["SELLER", "Seller"],
-                      ].map(([value, label]) => (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => setAccountType(value)}
-                          className={`flex-1 rounded-md px-3 py-2 text-xs font-medium ${accountType === value ? "bg-white text-foreground shadow-sm" : "text-muted-foreground"}`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    <Field label="Mobile number" required>
-                      <div className="flex h-11 rounded-lg border bg-white focus-within:border-primary">
-                        <span className="flex items-center border-r px-3 text-sm text-muted-foreground">
-                          +91
-                        </span>
-                        <input
-                          aria-label="Mobile number"
-                          autoComplete="tel-national"
-                          inputMode="numeric"
-                          maxLength={10}
-                          required
-                          pattern="[6-9][0-9]{9}"
-                          value={phone}
-                          onChange={(e) =>
-                            setPhone(e.target.value.replace(/\D/g, ""))
-                          }
-                          placeholder="Enter your 10 digit number"
-                          className="w-full rounded-r-lg bg-transparent px-3 text-sm outline-none"
-                        />
-                      </div>
-                    </Field>
-                  </>
-                ) : (
-                  <>
-                    <Field label="Verification code" required>
-                      <Input
-                        aria-label="Verification code"
-                        autoComplete="one-time-code"
-                        inputMode="numeric"
-                        maxLength={6}
-                        pattern="[0-9]{6}"
-                        value={code}
-                        onChange={(e) =>
-                          setCode(e.target.value.replace(/\D/g, ""))
-                        }
-                        className="h-12 text-center font-mono text-xl tracking-[.4em]"
-                        autoFocus
-                        required
-                      />
-                    </Field>
-                    {challenge.developmentCode && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                        <p className="font-medium">
-                          Local review code: {challenge.developmentCode}
-                        </p>
-                        <p className="mt-1 leading-5">
-                          SMS is disabled in this local workspace.
-                        </p>
-                        <Button
-                          type="button"
-                          variant="link"
-                          className="h-6 px-0 text-amber-800"
-                          onClick={() => setCode(challenge.developmentCode!)}
-                        >
-                          Use this code
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-                <FormError message={error} />
-                <BusyButton busy={busy} className="h-11 w-full">
-                  {challenge ? "Verify & continue" : "Get verification code"}
-                  <ArrowRight />
-                </BusyButton>
-                {challenge && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setChallenge(null);
-                      setCode("");
-                      setError("");
-                    }}
-                    className="w-full text-xs text-muted-foreground hover:text-primary"
-                  >
-                    Change mobile number
-                  </button>
-                )}
-              </form>
-              <p className="mt-5 text-center text-[10px] leading-5 text-muted-foreground">
-                Staff and platform members use their registered mobile number.
-              </p>
-            </div>
-            {config?.development &&
-              config.accounts.length > 0 &&
-              !challenge && (
-                <div className="mt-5 rounded-xl border border-dashed border-violet-200 bg-violet-50/40 p-4">
-                  <div className="mb-3 flex items-center gap-1.5 text-[11px] font-medium text-violet-700">
-                    <Sparkles className="size-3.5" />
-                    Sample accounts for local review
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {config.accounts
-                      .filter(
-                        (account, index, all) =>
-                          all.findIndex((a) => a.role === account.role) ===
-                          index,
-                      )
-                      .sort(
-                        (a, b) =>
-                          [
-                            "WHOLESALER_OWNER",
-                            "WHOLESALER_STAFF",
-                            "SELLER",
-                            "PLATFORM_ADMIN",
-                            "PLATFORM_OPERATIONS",
-                          ].indexOf(a.role) -
-                          [
-                            "WHOLESALER_OWNER",
-                            "WHOLESALER_STAFF",
-                            "SELLER",
-                            "PLATFORM_ADMIN",
-                            "PLATFORM_OPERATIONS",
-                          ].indexOf(b.role),
-                      )
-                      .map((account) => (
-                        <Button
-                          type="button"
-                          key={account.phone}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setPhone(account.phone);
-                            setAccountType(
-                              account.role === "SELLER"
-                                ? "SELLER"
-                                : "WHOLESALER_OWNER",
-                            );
-                          }}
-                        >
-                          {roleLabel[account.role]}
-                        </Button>
-                      ))}
-                  </div>
-                  <p className="mt-2 text-[10px] text-muted-foreground">
-                    Choose an account, then request its local OTP.
-                  </p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-[-1px]">
+            {title}
+          </h2>
+          <p className="mb-8 mt-3 text-sm leading-6 text-muted-foreground">
+            {challenge
+              ? `Enter the six-digit code sent to +91 ${phone}. The code expires in five minutes.`
+              : register
+                ? "First verify your mobile number. Then add your business details—no password to remember."
+                : "Sign in with your registered mobile number. We’ll send you a one-time verification code."}
+          </p>
+          <form onSubmit={challenge ? verify : request} className="space-y-5">
+            {!challenge ? (
+              <Field label="Mobile number" required>
+                <div className="flex h-12 overflow-hidden rounded-xl border bg-card focus-within:ring-2 focus-within:ring-ring/20">
+                  <span className="flex items-center border-r px-4 text-sm text-muted-foreground">
+                    +91
+                  </span>
+                  <input
+                    aria-label="Mobile number"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
+                    maxLength={10}
+                    required
+                    pattern="[6-9][0-9]{9}"
+                    value={phone}
+                    onChange={(e) =>
+                      setPhone(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="Your 10-digit mobile number"
+                    className="min-w-0 flex-1 bg-transparent px-4 text-base outline-none"
+                  />
                 </div>
+              </Field>
+            ) : (
+              <>
+                <Field label="Verification code" required>
+                  <Input
+                    aria-label="Verification code"
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    maxLength={6}
+                    pattern="[0-9]{6}"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                    className="h-14 rounded-xl text-center font-mono text-2xl tracking-[.4em]"
+                    autoFocus
+                    required
+                  />
+                </Field>
+                {challenge.developmentCode && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">
+                    <p>
+                      Local development OTP:{" "}
+                      <strong>{challenge.developmentCode}</strong>
+                    </p>
+                    <p>SMS is disabled for local testing.</p>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-7 px-0 text-amber-900"
+                      onClick={() => setCode(challenge.developmentCode!)}
+                    >
+                      Use this code
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+            <FormError message={error} />
+            <BusyButton
+              busy={busy || loading}
+              type="submit"
+              className="h-12 w-full rounded-xl text-sm"
+            >
+              {challenge
+                ? "Verify & continue"
+                : register
+                  ? "Verify my mobile"
+                  : "Send verification code"}
+              <ArrowRight />
+            </BusyButton>
+            {challenge && (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="link"
+                  className="px-0 text-xs"
+                  disabled={busy}
+                  onClick={() => {
+                    setChallenge(null);
+                    setCode("");
+                    setError("");
+                  }}
+                >
+                  Change number
+                </Button>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="px-0 text-xs"
+                  disabled={busy || seconds > 0}
+                  onClick={() => void request()}
+                >
+                  {seconds > 0 ? `Resend in ${seconds}s` : "Resend code"}
+                </Button>
+              </div>
+            )}
+          </form>
+          {!team && (
+            <p className="mt-7 text-center text-sm text-muted-foreground">
+              {register ? "Already have an account?" : "New to Wholseler?"}{" "}
+              <Link
+                href={other}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                {register
+                  ? "Sign in"
+                  : buyer
+                    ? "Create buyer account"
+                    : "Register your business"}
+              </Link>
+            </p>
+          )}
+          {!challenge && (
+            <p className="mt-5 text-center text-xs text-muted-foreground">
+              {team ? (
+                "Ask your business owner or platform administrator for access."
+              ) : (
+                <>
+                  Staff member?{" "}
+                  <Link href="/login/team" className="text-primary">
+                    Use team sign in
+                  </Link>
+                </>
               )}
-          </div>
-        </main>
-        <footer className="flex flex-wrap justify-between gap-2 border-t pt-5 text-[11px] text-muted-foreground">
-          <span>Wholseler · Catalog. Stock. Billing. Connected.</span>
-          <span>Built around the wholesale market.</span>
-        </footer>
-      </div>
+            </p>
+          )}
+          {!register && !challenge && config?.development && (
+            <details className="mt-8 rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+              <summary className="cursor-pointer">Local demo accounts</summary>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {config.accounts
+                  .filter(
+                    (a, i, all) =>
+                      all.findIndex((b) => b.role === a.role) === i,
+                  )
+                  .filter((a) =>
+                    buyer
+                      ? a.role === "SELLER"
+                      : team
+                        ? [
+                            "WHOLESALER_STAFF",
+                            "PLATFORM_ADMIN",
+                            "PLATFORM_OPERATIONS",
+                          ].includes(a.role)
+                        : ["WHOLESALER_OWNER", "WHOLESALER_STAFF"].includes(
+                            a.role,
+                          ),
+                  )
+                  .map((account) => (
+                    <Button
+                      type="button"
+                      key={account.phone}
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setPhone(account.phone)}
+                    >
+                      {labels[account.role]}
+                    </Button>
+                  ))}
+              </div>
+            </details>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

@@ -150,9 +150,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { refreshInterval: 30000 },
   );
   useEffect(() => {
-    if (!loading && error?.status === 401) router.replace("/login");
-    else if (user?.onboardingRequired) router.replace("/onboarding");
-  }, [loading, error, user, router]);
+    const buyerPath = pathname.startsWith("/seller");
+    if (!loading && error?.status === 401)
+      router.replace(
+        buyerPath
+          ? `/login/buyer?next=${encodeURIComponent(pathname)}`
+          : pathname.startsWith("/admin") || pathname.startsWith("/operations")
+            ? "/login/team"
+            : "/login/wholesaler",
+      );
+    else if (user?.onboardingRequired)
+      router.replace(
+        buyerPath
+          ? `/onboarding?next=${encodeURIComponent(pathname)}`
+          : "/onboarding",
+      );
+  }, [loading, error, user, router, pathname]);
   useEffect(() => {
     function keydown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -210,11 +223,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
       href !== "/operations" &&
       pathname.startsWith(href + "/"));
   async function logout() {
+    const entry =
+      user?.role === "SELLER"
+        ? "/login/buyer"
+        : user?.role === "WHOLESALER_OWNER"
+          ? "/login/wholesaler"
+          : "/login/team";
     await send("/auth/logout", {});
     try {
       await refresh();
     } catch {}
-    router.replace("/login");
+    router.replace(entry);
   }
   function go(href: string) {
     setMobileOpen(false);

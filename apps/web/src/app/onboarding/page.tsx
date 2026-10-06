@@ -1,4 +1,9 @@
-import { Onboarding } from "@/components/settings";
+import { Onboarding } from "@/components/onboarding";
+import { Suspense } from "react";
 export default function Page() {
-  return <Onboarding />;
+  return (
+    <Suspense>
+      <Onboarding />
+    </Suspense>
+  );
 }
