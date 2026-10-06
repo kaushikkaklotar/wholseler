@@ -139,7 +139,7 @@ async function main() {
       }),
       buyerActor = actor(buyerUser, null, buyer.id);
     const productInput = {
-      name: "Phase 1 test kurti",
+      name: "Phase 1 कपड़ा test kurti",
       sku: `P1-${tag}`.toUpperCase(),
       category: "Kurtis",
       pricePaise: 10000,
@@ -165,6 +165,10 @@ async function main() {
       (await reservations.create(a, holdBody)).id,
       hold.id,
       "hold retry must be idempotent",
+    );
+    await assert.rejects(
+      () => reservations.create(a, { ...holdBody, hours: 48 }),
+      /request key/,
     );
     await assert.rejects(
       () => reservations.create(b, { ...holdBody, requestKey: randomUUID() }),
@@ -208,11 +212,27 @@ async function main() {
         .status,
       "CONSUMED",
     );
+    const otherHold = await reservations.create(a, {
+      ...holdBody,
+      requestKey: randomUUID(),
+      quantity: 1,
+      buyerPhone: otherOwner.phone,
+    });
     await billing.returnItems(a, heldInvoice.id, {
       requestKey: randomUUID(),
       reason: "Returned one held unit",
       items: [{ itemId: heldInvoice.items[0].id, quantity: 1 }],
     });
+    const returnMovement = await db.stockMovement.findFirstOrThrow({
+      where: { businessId: shop.id, type: "RETURN" },
+      orderBy: { createdAt: "desc" },
+    });
+    assert.equal(
+      returnMovement.reservedAfter,
+      1,
+      "returns preserve the remaining buyer hold in the ledger",
+    );
+    await reservations.release(a, otherHold.id);
     await billing.cancel(a, heldInvoice.id, {
       reason: "Cancel remainder after return",
     });

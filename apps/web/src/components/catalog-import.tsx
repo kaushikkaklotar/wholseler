@@ -191,11 +191,12 @@ export function CatalogImport({
   }
   async function pickImages(files: FileList | null) {
     if (!files) return;
+    const selectedFiles = Array.from(files);
     setBusy(true);
     setErrors([]);
     try {
       await cleanup();
-      setImages(await readImageFiles(files));
+      setImages(await readImageFiles(selectedFiles));
       requestKey.current = crypto.randomUUID();
     } catch (e) {
       setImages([]);
