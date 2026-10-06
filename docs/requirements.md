@@ -11,7 +11,7 @@ Source: Wholesale Commerce System Research Report (11 pages). Phase 1 is the int
 | Stock | Physical, reserved and available balances; opening/in/out/sale/return/adjustment ledger; buyer holds with expiry, release and billing consumption; retry-safe CSV/XLSX stock preview/import |
 | Counter billing | GST/non-GST, integer-paise totals, buyer snapshots, discounts, payments, print/CSV, atomic concurrent stock guards, idempotency, returns/cancel |
 | Buyer discovery | Search, category/city/market/stock/price filters, new/trending, product and supplier favorites, available variants, saved supplier arrivals |
-| Category ranking | Daily distinct buyer searches, views, recent incoming movement and billed quantities feed weighted category/trending scores; this is an observed activity score |
+| Category ranking | Daily distinct buyer category searches, views, recent incoming movement and billed quantities feed weighted category/trending scores; this is an observed activity score |
 | Direct contact | Supplier CALL/WHATSAPP/BOTH preference, recorded inquiries and stages, buyer history and invoice conversion; the user opens/sends the prepared WhatsApp message |
 | Onboarding/KYC | Business/buyer profiles, marketplace channels, optional GST/PAN and private documents, verification/suspension, product review; no automated legal identity verification |
 | Staff | Live permission matrix, active staff caps, disabled session invalidation and tenant isolation |

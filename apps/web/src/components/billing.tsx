@@ -327,6 +327,10 @@ export function NewBill() {
   function add(variant: BillVariant) {
     setCart((lines) => {
       const old = lines.find((l) => l.variant.id === variant.id);
+      if (old?.reservationId) {
+        toast.error("Remove the buyer hold before adding this variant normally");
+        return lines;
+      }
       if (old && old.quantity >= variant.stock) {
         toast.error("All available units are already on this bill");
         return lines;
@@ -488,14 +492,14 @@ export function NewBill() {
                 ) : variants.length ? (
                   <div className="grid gap-px bg-border sm:grid-cols-2">
                     {variants.map((v) => {
-                      const added =
-                        cart.find((l) => l.variant.id === v.id)?.quantity || 0;
+                      const line = cart.find((l) => l.variant.id === v.id);
+                      const added = line?.reservationId ? 0 : line?.quantity || 0;
                       return (
                         <button
                           type="button"
                           key={v.id}
                           onClick={() => add(v)}
-                          disabled={added >= v.stock}
+                          disabled={!!line?.reservationId || added >= v.stock}
                           className="flex items-center gap-3 bg-white px-4 py-3 text-left hover:bg-violet-50/40 disabled:opacity-40"
                         >
                           <Thumb
