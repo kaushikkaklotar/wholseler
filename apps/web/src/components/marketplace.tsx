@@ -606,7 +606,9 @@ export function MarketplaceHome() {
                         `${plan.productLimit.toLocaleString()} active products`,
                         `${plan.staffLimit} staff members`,
                         "Inventory & counter billing",
-                        ...(plan.bulkImport ? ["Bulk CSV import"] : []),
+                        ...(plan.bulkImport
+                          ? ["Excel / CSV & image imports"]
+                          : []),
                         ...(plan.advancedReports ? ["Advanced reports"] : []),
                       ].map((text) => (
                         <p key={text} className="flex items-center gap-2">
@@ -630,9 +632,9 @@ export function MarketplaceHome() {
               </div>
             )}
             <p className="mt-5 text-xs text-muted-foreground">
-              New businesses start on the lowest-priced active plan. Contact the
-              platform team from your workspace for plan changes. Subscription
-              checkout is not available yet.
+              New businesses receive a 30-day trial on the lowest-priced active
+              plan. Contact the platform team for monthly or yearly renewal;
+              received payments and receipts appear in your workspace.
             </p>
           </div>
         </section>

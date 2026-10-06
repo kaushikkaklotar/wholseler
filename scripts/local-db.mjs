@@ -47,6 +47,7 @@ const pg = new EmbeddedPostgres({
   port: Number(url.port) || 54329,
   persistent: true,
   authMethod: "scram-sha-256",
+  initdbFlags: ["--encoding=UTF8", "--locale=C"],
   postgresFlags: ["-h", "127.0.0.1"],
   onLog: (message) => {
     startupLog.push(String(message));

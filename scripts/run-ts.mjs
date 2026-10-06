@@ -1,6 +1,8 @@
 import { spawn } from "node:child_process";
+import { config } from "dotenv";
 import path from "node:path";
 import { readdir } from "node:fs/promises";
+config({ path: path.resolve(".env"), quiet: true });
 const args = process.argv.slice(2);
 const runtimeArgs =
   args[0] === "--test"

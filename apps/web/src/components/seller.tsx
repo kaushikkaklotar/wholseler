@@ -757,6 +757,13 @@ export function Suppliers() {
       toast.error(errorMessage(e));
     }
   }
+  const filtered = (data || []).filter(
+    (b) =>
+      (!savedOnly || b.favorite) &&
+      `${b.name} ${b.categories.join(" ")} ${b.marketArea} ${b.city}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  );
   return (
     <>
       <PageHeader
@@ -794,64 +801,67 @@ export function Suppliers() {
         <Loading />
       ) : (
         <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-          {data
-            .filter((b) => !savedOnly || b.favorite)
-            .filter((b) =>
-              `${b.name} ${b.categories.join(" ")} ${b.marketArea} ${b.city}`
-                .toLowerCase()
-                .includes(query.toLowerCase()),
-            )
-            .map((b) => (
-              <Panel key={b.id}>
-                <div className="space-y-4 p-5">
-                  <div className="flex items-center gap-3">
-                    <Initials name={b.name} />
-                    <div>
-                      <h2 className="text-sm font-semibold">{b.name}</h2>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
-                        {b.marketArea}, {b.city}
-                      </p>
-                    </div>
-                    <Button
-                      className="ml-auto"
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={`${b.favorite ? "Unsave" : "Save"} supplier ${b.name}`}
-                      onClick={() => {
-                        void saveSupplier(b);
-                      }}
-                    >
-                      <Heart
-                        className={
-                          b.favorite ? "fill-primary text-primary" : ""
-                        }
-                      />
-                    </Button>
-                    <ShieldCheck className="size-4 text-emerald-600" />
+          {!filtered?.length && (
+            <Empty
+              title={
+                savedOnly ? "No saved suppliers yet" : "No matching suppliers"
+              }
+              description={
+                savedOnly
+                  ? "Save suppliers to find them here and choose new-arrival alerts in Notifications."
+                  : "Try another business name, category or market."
+              }
+            />
+          )}
+          {filtered.map((b) => (
+            <Panel key={b.id}>
+              <div className="space-y-4 p-5">
+                <div className="flex items-center gap-3">
+                  <Initials name={b.name} />
+                  <div>
+                    <h2 className="text-sm font-semibold">{b.name}</h2>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      {b.marketArea}, {b.city}
+                    </p>
                   </div>
-                  <p className="text-xs leading-6 text-muted-foreground">
-                    {b.description ||
-                      "Explore this supplier's catalog for sourcing details."}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {b.categories.map((c) => (
-                      <Pill key={c}>{c}</Pill>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between border-t pt-4">
-                    <span className="text-[11px] text-muted-foreground">
-                      {b._count?.products || 0} published products
-                    </span>
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/seller?q=${encodeURIComponent(b.name)}`}>
-                        Explore catalog
-                        <ArrowRight />
-                      </Link>
-                    </Button>
-                  </div>
+                  <Button
+                    className="ml-auto"
+                    size="icon-sm"
+                    variant="ghost"
+                    aria-label={`${b.favorite ? "Unsave" : "Save"} supplier ${b.name}`}
+                    onClick={() => {
+                      void saveSupplier(b);
+                    }}
+                  >
+                    <Heart
+                      className={b.favorite ? "fill-primary text-primary" : ""}
+                    />
+                  </Button>
+                  <ShieldCheck className="size-4 text-emerald-600" />
                 </div>
-              </Panel>
-            ))}
+                <p className="text-xs leading-6 text-muted-foreground">
+                  {b.description ||
+                    "Explore this supplier's catalog for sourcing details."}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {b.categories.map((c) => (
+                    <Pill key={c}>{c}</Pill>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between border-t pt-4">
+                  <span className="text-[11px] text-muted-foreground">
+                    {b._count?.products || 0} published products
+                  </span>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href={`/seller?q=${encodeURIComponent(b.name)}`}>
+                      Explore catalog
+                      <ArrowRight />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </Panel>
+          ))}
         </div>
       )}
     </>

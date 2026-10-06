@@ -45,6 +45,12 @@ export async function readImportFile(
     skipEmptyLines: "greedy",
     transformHeader: normalizeHeader,
   });
+  const fields = result.meta.fields || [];
+  if (
+    fields.some((h) => !h) ||
+    Object.keys(result.meta.renamedHeaders || {}).length
+  )
+    throw new Error("Column headers must be non-empty and unique");
   if (result.errors.length)
     throw new Error(result.errors.map((e) => e.message).join("; "));
   if (result.data.length > 500)

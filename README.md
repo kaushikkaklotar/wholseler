@@ -72,3 +72,7 @@ Notifications are opt-in per topic and channel on `/notifications`. `NOTIFICATIO
 Owners view their subscription and collection history at `/dashboard/subscription`. Platform admins record payments already received (monthly/yearly, amount, method and reference). No gateway payment is implied. New businesses receive a 30-day trial; migration gives existing businesses a 30-day grace period. Expiry blocks new bills/catalog/stock/team growth but permits record viewing, existing payment recording, returns/cancellation, settings and stock hold release. Paid renewal extends an existing paid term, or starts now after trial/expiry. Every renewal preserves its original plan/price snapshot.
 
 See [docs/requirements.md](docs/requirements.md) for scope and the launch checklist.
+
+## Local backup and Unicode upgrade
+
+New local databases are initialized with UTF-8. For an existing Windows database created with the old default encoding, stop the app (keep PostgreSQL running), then run `node scripts/local-utf8.mjs --pg-bin "C:/Program Files/PostgreSQL/18/bin"`. The helper writes a custom-format UTF-8 backup and environment backup in `.data/backups`, restores into a new database, compares every public table's row count, and updates `.env` only after successful verification. It retains the original database. Restart the app after `npm run db:deploy`. An already UTF-8 database is backed up without being replaced. This development helper is not a production backup scheduler.
