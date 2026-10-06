@@ -17,8 +17,8 @@
     "db:seed": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs packages/db/seed.ts",
     "db:studio": "prisma studio --schema packages/db/schema.prisma",
     "db:local": "node scripts/local-db.mjs",
-    "test": "node scripts/run-ts.mjs --test",
-    "test:integration": "node scripts/run-ts.mjs tests/integration.ts",
+    "test": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs --test",
+    "test:integration": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/integration.ts",
     "setup": "npm run db:generate && npm run db:deploy && npm run db:seed"
   },
   "devDependencies": {

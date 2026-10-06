@@ -10,7 +10,12 @@ import {
   ShieldCheck,
   Store,
 } from "lucide-react";
-import { businessSchema, categories, sellerSchema } from "@wholesale/shared";
+import {
+  businessSchema,
+  categories,
+  gstSchema,
+  sellerSchema,
+} from "@wholesale/shared";
 import { home, useSession } from "@/components/session";
 import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -73,6 +78,15 @@ export function Onboarding() {
     e.preventDefault();
     setMessage("");
     if (step < 2) {
+      if (step === 1) {
+        const gst = gstSchema.safeParse(draft.gstNumber);
+        if (!gst.success) {
+          setMessage(
+            "Enter a valid GSTIN, or leave it blank if you are not registered.",
+          );
+          return;
+        }
+      }
       if (step === 1 && !buyer && !draft.categories.length) {
         setMessage("Choose at least one product category.");
         return;
@@ -82,17 +96,23 @@ export function Onboarding() {
     }
     setBusy(true);
     try {
-      const payload = buyer
-        ? sellerSchema.parse({
+      const checked = buyer
+        ? sellerSchema.safeParse({
             name: draft.ownerName,
             businessName: draft.name,
             city: draft.city,
             gstNumber: draft.gstNumber,
           })
-        : {
-            ...businessSchema.parse({ ...draft, phone: user!.phone }),
-            ownerName: draft.ownerName,
-          };
+        : businessSchema.safeParse({ ...draft, phone: user!.phone });
+      if (!checked.success) {
+        setMessage(
+          checked.error.issues.map((issue) => issue.message).join(". "),
+        );
+        return;
+      }
+      const payload = buyer
+        ? checked.data
+        : { ...checked.data, ownerName: draft.ownerName };
       await send("/auth/onboard", payload);
       const signed = await refresh();
       if (signed)

@@ -4,8 +4,11 @@ export function buyerDestination(user: SessionUser, next: string | null) {
     user.role !== "SELLER" ||
     !next ||
     !/^\/seller(?:\/|\?|$)/.test(next) ||
-    next.includes("\\")
+    next.includes("\\") ||
+    /%2f|%5c/i.test(next)
   )
     return null;
-  return next;
+  const url = new URL(next, "https://wholseler.local");
+  if (!/^\/seller(?:\/|$)/.test(url.pathname)) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
 }
