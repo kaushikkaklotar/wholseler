@@ -115,6 +115,7 @@ export class SourcingService {
     const conditions: Prisma.Sql[] = [
       Prisma.sql`p.moderation='APPROVED'`,
       Prisma.sql`b."verificationStatus"='VERIFIED'`,
+      Prisma.sql`EXISTS (SELECT 1 FROM "User" owner WHERE owner.id=b."ownerId" AND owner."isSample"=false AND owner.disabled=false)`,
     ];
     const canPrice = approved.size
       ? Prisma.sql`(p.visibility='PUBLIC' OR (p.visibility='APPROVED_SELLERS' AND p."businessId" IN (${Prisma.join([...approved])})))`
@@ -194,7 +195,7 @@ export class SourcingService {
       this.db.$queryRaw<{ total: bigint }[]>(
         Prisma.sql`SELECT COUNT(*) AS total FROM "Product" p JOIN "Business" b ON p."businessId"=b.id WHERE ${where}`,
       ),
-      this.db.business.count({ where: { verificationStatus: "VERIFIED" } }),
+      this.db.business.count({ where: { verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } } }),
     ]);
     const products = await this.db.product.findMany({
       where: { id: { in: ids.map((p) => p.id) } },
@@ -217,7 +218,7 @@ export class SourcingService {
       where: {
         id,
         moderation: "APPROVED",
-        business: { verificationStatus: "VERIFIED" },
+        business: { verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } },
       },
       include: publicInclude,
     });
@@ -269,7 +270,7 @@ export class SourcingService {
       where: {
         id,
         moderation: "APPROVED",
-        business: { verificationStatus: "VERIFIED" },
+        business: { verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } },
       },
     });
     if (!product) throw new NotFoundException("Product not found");
@@ -306,7 +307,7 @@ export class SourcingService {
         where: {
           id: input.productId,
           moderation: "APPROVED",
-          business: { verificationStatus: "VERIFIED" },
+          business: { verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } },
         },
         include: { business: true },
       });
@@ -378,7 +379,7 @@ export class SourcingService {
     });
     const saved = new Set(favorites.map((f) => f.businessId));
     const shops = await this.db.business.findMany({
-      where: { verificationStatus: "VERIFIED" },
+      where: { verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } },
       select: {
         id: true,
         name: true,
@@ -402,7 +403,7 @@ export class SourcingService {
     const input = parse(z.object({ favorite: z.boolean() }), body);
     if (
       !(await this.db.business.findFirst({
-        where: { id, verificationStatus: "VERIFIED" },
+        where: { id, verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } },
       }))
     )
       throw new NotFoundException("Verified supplier not found");
@@ -456,9 +457,9 @@ export class SourcingService {
     >`
       SELECT p.category, COUNT(*) AS products, SUM(p."viewCount") AS views, SUM(p."soldUnits") AS sold,
       COALESCE((SELECT SUM(GREATEST(sm.quantity,0)) FROM "StockMovement" sm JOIN "Product" mp ON mp.id=sm."productId" JOIN "Business" mb ON mb.id=mp."businessId"
-        WHERE mp.category=p.category AND mp.moderation='APPROVED' AND mb."verificationStatus"='VERIFIED' AND sm."createdAt">NOW()-INTERVAL '30 days'),0) AS "stockMovement",
+        WHERE mp.category=p.category AND mp.moderation='APPROVED' AND mb."verificationStatus"='VERIFIED' AND EXISTS (SELECT 1 FROM "User" owner WHERE owner.id=mb."ownerId" AND owner."isSample"=false AND owner.disabled=false) AND sm."createdAt">NOW()-INTERVAL '30 days'),0) AS "stockMovement",
       (SELECT COUNT(*) FROM "SearchEvent" se WHERE (se.category=p.category OR (se.category='' AND se.query=LOWER(p.category))) AND se."createdAt">NOW()-INTERVAL '30 days') AS searches
-      FROM "Product" p JOIN "Business" b ON b.id=p."businessId" WHERE p.moderation='APPROVED' AND b."verificationStatus"='VERIFIED' GROUP BY p.category`;
+      FROM "Product" p JOIN "Business" b ON b.id=p."businessId" WHERE p.moderation='APPROVED' AND b."verificationStatus"='VERIFIED' AND EXISTS (SELECT 1 FROM "User" owner WHERE owner.id=b."ownerId" AND owner."isSample"=false AND owner.disabled=false) GROUP BY p.category`;
     return rows
       .map((r) => ({
         category: r.category,

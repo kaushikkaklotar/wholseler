@@ -24,6 +24,7 @@ import { categories, money } from "@wholesale/shared";
 import type { Inquiry, SellerProduct, Supplier } from "@/lib/types";
 import { date, errorMessage, send } from "@/lib/api";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
+import { SupplierDirectory } from "@/components/supplier-directory";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -770,6 +771,7 @@ export function Suppliers() {
         title="Wholesale suppliers"
         description="Find verified businesses and explore their available catalogs."
       />
+      {!savedOnly && <div className="mb-10"><SupplierDirectory query={query} /></div>}
       <div className="mb-4">
         <Button
           size="sm"

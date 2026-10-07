@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Empty, ErrorState, Loading, Pagination } from "@/components/common";
 import { home, useSession } from "@/components/session";
+import { SupplierDirectory } from "@/components/supplier-directory";
 
 export type MarketProduct = {
   id: string;
@@ -75,6 +76,7 @@ export function PublicHeader() {
           <Link href="/marketplace" className="hover:text-primary">
             Marketplace
           </Link>
+          <Link href="/#supplier-directory" className="hover:text-primary">Suppliers</Link>
           <Link href="/#wholesalers" className="hover:text-primary">
             For wholesalers
           </Link>
@@ -127,6 +129,7 @@ export function PublicHeader() {
         >
           {[
             ["Marketplace", "/marketplace"],
+            ["Suppliers", "/#supplier-directory"],
             ["For wholesalers", "/#wholesalers"],
             ["How it works", "/#how-it-works"],
             ["Plans", "/#plans"],
@@ -166,6 +169,7 @@ export function PublicFooter() {
           </p>
           <div className="mt-4 grid gap-3 text-sm text-muted-foreground">
             <Link href="/marketplace">Browse the marketplace</Link>
+            <Link href="/#supplier-directory">Surat supplier directory</Link>
             <Link href="/register/buyer">Create a buyer account</Link>
             <Link href="/register/wholesaler">Register as a wholesaler</Link>
           </div>
@@ -420,6 +424,7 @@ export function MarketplaceHome() {
             })}
           </div>
         </div>
+        <div className="mx-auto max-w-7xl px-5 py-12 lg:px-10"><SupplierDirectory /></div>
         <section className="mx-auto max-w-7xl px-5 py-16 lg:px-10">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -805,6 +810,7 @@ export function MarketplaceBrowse() {
             Reset
           </Button>
         </form>
+        <div className="my-10"><SupplierDirectory query={search} category={category} city={city} /></div>
         <p className="mb-5 mt-6 text-xs text-muted-foreground">
           {data ? `${data.total} published products` : "Loading catalog…"}
         </p>

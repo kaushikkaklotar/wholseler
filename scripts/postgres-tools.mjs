@@ -65,7 +65,7 @@ export function connectionEnv(url) {
   return env;
 }
 export async function pgTool(name, args, url) {
-  const bin = option("--pg-bin");
+  const bin = option("--pg-bin") || process.env.PG_BIN;
   const executable = bin
     ? path.join(bin, `${name}${process.platform === "win32" ? ".exe" : ""}`)
     : name;

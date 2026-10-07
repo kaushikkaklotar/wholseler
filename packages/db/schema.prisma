@@ -116,6 +116,25 @@ model Plan {
   active Boolean @default(true)
   businesses Business[]
 }
+// Publicly sourced business contacts are listings, not authenticated members.
+model SupplierListing {
+  id String @id
+  name String
+  phone String
+  email String @default("")
+  city String
+  marketArea String
+  address String
+  categories String[]
+  description String
+  website String
+  sourceUrl String
+  checkedAt DateTime
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([active,city])
+}
 model Business {
   id String @id @default(cuid())
   ownerId String @unique

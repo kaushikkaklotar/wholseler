@@ -67,6 +67,7 @@ export class MarketplaceService {
       moderation: "APPROVED",
       business: {
         verificationStatus: "VERIFIED",
+        owner: { isSample: false, disabled: false },
         ...(query.city
           ? { city: { contains: query.city.slice(0, 80), mode: "insensitive" } }
           : {}),
@@ -99,7 +100,7 @@ export class MarketplaceService {
       where: {
         id,
         moderation: "APPROVED",
-        business: { verificationStatus: "VERIFIED" },
+        business: { verificationStatus: "VERIFIED", owner: { isSample: false, disabled: false } },
       },
       select: selection,
     });
@@ -122,6 +123,20 @@ export class MarketplaceService {
       orderBy: { monthlyPricePaise: "asc" },
     });
   }
+  async suppliers(query: Record<string, string | undefined>) {
+    const q = query.q?.trim().slice(0, 100);
+    return this.db.supplierListing.findMany({
+      where: {
+        active: true,
+        ...(query.city ? { city: { contains: query.city.slice(0, 80), mode: "insensitive" as const } } : {}),
+        ...(query.category ? { categories: { has: query.category.slice(0, 60) } } : {}),
+        ...(q ? { OR: ["name", "marketArea", "address", "description"].map((field) => ({ [field]: { contains: q, mode: "insensitive" } })) } : {}),
+      },
+      select: { id: true, name: true, phone: true, city: true, marketArea: true, address: true, categories: true, description: true, website: true, sourceUrl: true, checkedAt: true },
+      orderBy: { name: "asc" },
+      take: 200,
+    });
+  }
 }
 @Controller("v1/marketplace")
 class MarketplaceController {
@@ -138,6 +153,9 @@ class MarketplaceController {
   }
   @Get("plans") plans() {
     return this.market.plans();
+  }
+  @Get("suppliers") suppliers(@Query() query: Record<string, string | undefined>) {
+    return this.market.suppliers(query);
   }
 }
 @Module({

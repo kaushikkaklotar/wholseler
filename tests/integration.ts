@@ -4,6 +4,9 @@ import { Database } from "../apps/api/src/database";
 import { BillingService } from "../apps/api/src/billing";
 import { AuthService } from "../apps/api/src/auth";
 import { MarketplaceService } from "../apps/api/src/marketplace";
+import { importSupplierListings } from "../apps/api/src/supplier-directory";
+import { SourcingService } from "../apps/api/src/sourcing";
+import { TeamService } from "../apps/api/src/team";
 import type { Response } from "express";
 import type { SessionUser } from "@wholesale/shared";
 
@@ -11,6 +14,10 @@ const db = new Database();
 const billing = new BillingService(db);
 const auth = new AuthService(db);
 const market = new MarketplaceService(db);
+const sourcing = new SourcingService(db);
+const team = new TeamService(db);
+const listingId = `directory-${randomUUID()}`;
+let teamPlanId = "";
 const authPhones: string[] = [];
 const suffix = randomUUID().slice(0, 8);
 const phone = (tail: string) =>
@@ -161,6 +168,33 @@ async function main() {
     assert.equal(restricted.pricePaise, null);
     assert.equal("phone" in restricted.business, false);
     assert.equal("businessId" in restricted, false);
+    // Demo and disabled owners must not look like real, active suppliers.
+    for (const flag of ["isSample", "disabled"] as const) {
+      await db.user.update({ where: { id: b.actor.id }, data: { [flag]: true } });
+      await assert.rejects(() => market.one(b.variant.productId), /no longer available/);
+      assert.equal((await market.products({ q: `Race product B` })).products.some((p) => p.id === b.variant.productId), false);
+      assert.equal((await sourcing.suppliers({ ...b.actor, sellerId: "unused-test-seller" })).some((shop) => shop.id === b.actor.businessId), false);
+      await db.user.update({ where: { id: b.actor.id }, data: { [flag]: false } });
+    }
+    const listing = {
+      id: listingId, name: `Directory ${suffix}`, phone: "9876543210", email: "",
+      city: "Surat", marketArea: "Source test market", address: "Source test address, Surat",
+      categories: ["Sarees"], description: "Public business directory integration fixture.",
+      website: "https://directory.example/", sourceUrl: "https://directory.example/contact",
+      checkedAt: new Date().toISOString(),
+    };
+    const usersBeforeImport = await db.user.count();
+    await importSupplierListings(db, [listing]);
+    await importSupplierListings(db, [listing]);
+    assert.equal(await db.supplierListing.count({ where: { id: listingId } }), 1);
+    assert.equal(await db.user.count(), usersBeforeImport, "directory import must not register business owners");
+    assert.equal((await market.suppliers({ q: suffix, category: "Sarees", city: "Surat" })).length, 1);
+    assert.equal((await market.suppliers({ q: suffix, category: "Kurtis" })).length, 0);
+    await assert.rejects(() => importSupplierListings(db, [{ ...listing, sourceUrl: "https://different.example/contact" }]));
+    await assert.rejects(() => importSupplierListings(db, [{ ...listing, stock: 100 }]));
+    await db.supplierListing.update({ where: { id: listingId }, data: { active: false } });
+    await importSupplierListings(db, [listing]);
+    assert.equal((await market.suppliers({ q: suffix })).length, 0, "reimport must preserve manual listing deactivation");
     await db.product.update({
       where: { id: b.variant.productId },
       data: { moderation: "PENDING" },
@@ -268,10 +302,31 @@ async function main() {
     assert.equal(complete!.onboardingRequired, false);
     assert.equal(complete!.verificationStatus, "PENDING");
     await assert.rejects(() => auth.onboard(complete!, {}), /already set up/);
+    const teamPlan = await db.plan.create({ data: { name: `Team ${suffix}`, monthlyPricePaise: 100, yearlyPricePaise: 1000, staffLimit: 2, productLimit: 10 } });
+    teamPlanId = teamPlan.id;
+    await db.business.update({ where: { id: complete!.businessId! }, data: { planId: teamPlan.id } });
+    const member = (tail: string) => ({ name: `Staff ${tail}`, phone: phone(tail), designation: "Cashier", permissions: ["BILLING:VIEW", "BILLING:CREATE"], active: true });
+    const staff = await team.save(complete!, null, member("51"));
+    ids.users.push(staff.userId);
+    const concurrentInvites = await Promise.allSettled([team.save(complete!, null, member("52")), team.save(complete!, null, member("53"))]);
+    assert.equal(concurrentInvites.filter((result) => result.status === "fulfilled").length, 1, "concurrent staff invitations must enforce the plan cap");
+    for (const result of concurrentInvites) if (result.status === "fulfilled") ids.users.push(result.value.userId);
+    assert.equal((await team.list(complete!)).activeCount, 2);
+    authPhones.push(member("51").phone);
+    const staffChallenge = await auth.request({ phone: member("51").phone, portal: "TEAM", intent: "LOGIN" });
+    let staffToken = "";
+    const staffActor = await auth.verify({ challengeId: staffChallenge.challengeId, code: staffChallenge.developmentCode! }, { cookie: (_name: string, value: string) => { staffToken = value; } } as unknown as Response);
+    assert.ok(staffActor);
+    await assert.rejects(() => team.save(staffActor!, staff.id, { ...member("51"), permissions: ["STAFF:VIEW", "STAFF:EDIT"] }), /only grant permissions/);
+    await team.save(complete!, staff.id, { ...member("51"), active: false });
+    assert.equal(await auth.current(staffToken), null, "disabling a staff account must revoke its session immediately");
+    await db.business.update({ where: { id: complete!.businessId! }, data: { subscriptionEndsAt: new Date(Date.now() - 1000) } });
+    await assert.rejects(() => team.save(complete!, staff.id, member("51")), /expired/);
     console.log(
-      "Integration checks passed: stock concurrency, billing idempotency, tenant isolation, public catalog privacy, login/register separation, OTP replay/resend and business onboarding.",
+      "Integration checks passed: stock concurrency, billing idempotency, tenant isolation, public catalog privacy, demo/disabled-owner exclusion, source-backed directory isolation, login/register separation, OTP replay/resend, onboarding, concurrent staff caps, permission escalation prevention, disabled sessions and expired reactivation.",
     );
   } finally {
+    await db.supplierListing.deleteMany({ where: { id: listingId } });
     for (const businessId of ids.businesses) {
       await db.notification.deleteMany({ where: { businessId } });
       await db.auditLog.deleteMany({ where: { businessId } });
@@ -292,6 +347,7 @@ async function main() {
     await db.session.deleteMany({ where: { userId: { in: ids.users } } });
     await db.user.deleteMany({ where: { id: { in: ids.users } } });
     await db.otpChallenge.deleteMany({ where: { phone: { in: authPhones } } });
+    if (teamPlanId) await db.plan.delete({ where: { id: teamPlanId } });
     await db.$disconnect();
   }
 }

@@ -162,7 +162,8 @@ async function main() {
     });
     const dir = path.join(root, ".data/launch-tests", tag);
     await mkdir(dir, { recursive: true });
-    const bin = process.env.PG_BIN ? ["--pg-bin", process.env.PG_BIN] : [];
+    // Exercise PG_BIN alone: the tools must not silently choose an older PATH client.
+    const bin: string[] = [];
     await run(["scripts/db-backup.mjs", "--out-dir", dir, ...bin]);
     const file = path.join(
       dir,
