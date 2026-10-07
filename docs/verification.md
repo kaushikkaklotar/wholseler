@@ -33,3 +33,13 @@ Outbound delivery tests use a mocked provider and verify queue behavior only. Re
 Sharp was updated to 0.35.5 for image-processing advisories. The dependency audit still flags the Prisma configuration toolchain's deepmerge-ts recursive-object issue; this release does not pass untrusted configuration objects into that toolchain. Review the tooling dependency before production release; no forced major-version migration was applied.
 
 The report's recommended Pro multi-godown/promotion credits/priority-support benefits remain unimplemented and are not sold by the current plan UI. See requirements.md for the complete scope boundary.
+# 7 October 2026 — launch preparation checkpoint
+
+The follow-up adds production-only provisioning (plans/admin without demo data), startup/readiness guards, exported-snapshot backup and restore rehearsal tools, a container configuration and GitHub Actions checks. This is implementation preparation, not evidence of a live deployment.
+
+- Cloud typecheck (including operational scripts), lint, 12 unit tests and production build passed. Production startup rejected the development configuration before opening the API.
+- The original Windows repository was inspected at `16f577b`, with a clean tree. The existing local app was opened successfully in the browser before the remote connection stopped responding.
+- The new `test:launch` database/recovery suite has **not run**. It needs the connected laptop or CI, CREATE DATABASE privileges and PostgreSQL 18 tools. Container build/runtime verification has **not completed**.
+- Desktop Commander still listed the laptop as Online, but command/file operations and connectivity pings stopped replying. The latest code is committed in the working checkout and supplied as an incremental Git bundle. No successful sync into the original Windows project or GitHub push of these changes has been confirmed. GitHub main was last verified at `16f577b`.
+
+On reconnection: fetch the bundle into the review worktree, run `npm run test:launch` with `PG_BIN` set, rerun billing/Phase 1 suites and build, verify container startup, then fast-forward the clean original main and push. Do not treat this checkpoint as completion of those checks. Production provider credentials and real pilot acceptance remain required; see [production.md](production.md).

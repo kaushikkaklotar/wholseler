@@ -89,7 +89,7 @@ export async function sha256(file) {
 export async function tableCounts(db) {
   const tables =
     await db.$queryRaw`SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename`;
-  const counts = {};
+  const counts = Object.create(null);
   for (const { tablename } of tables) {
     const [row] = await db.$queryRawUnsafe(
       `SELECT count(*)::text AS count FROM "public"."${tablename.replaceAll('"', '""')}"`,

@@ -26,6 +26,7 @@ test("Production rejects development authentication, non-TLS database and sample
   for (const change of [
     { AUTH_MODE: "development" },
     { DATABASE_URL: "postgresql://u:p@db/wholesale" },
+    { DATABASE_URL: "postgresql://u:p@db/wholesale?sslmode=require" },
     { SEED_SAMPLE_DATA: "true" },
     { WEB_ORIGIN: "https://wholesale.test/" },
     { WEB_ORIGIN: "https://wholesale.test/path" },

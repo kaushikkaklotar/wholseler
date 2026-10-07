@@ -1,0 +1,10 @@
+{
+  "extends": "./apps/api/tsconfig.json",
+  "compilerOptions": { "rootDir": ".", "noEmit": true },
+  "include": [
+    "scripts/bootstrap-production.ts",
+    "scripts/check-production.ts",
+    "tests/launch-integration.ts",
+    "tests/production.test.ts"
+  ]
+}
