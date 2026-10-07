@@ -52,10 +52,16 @@ export function connectionEnv(url) {
   for (const [key, variable] of [
     ["sslmode", "PGSSLMODE"],
     ["sslrootcert", "PGSSLROOTCERT"],
-    ["sslcert", "PGSSLCERT"],
+    ["sslcert", "PGSSLROOTCERT"],
     ["sslkey", "PGSSLKEY"],
   ])
     if (url.searchParams.has(key)) env[variable] = url.searchParams.get(key);
+  if (url.searchParams.get("sslaccept") === "strict")
+    env.PGSSLMODE = "verify-full";
+  if (url.searchParams.has("sslidentity"))
+    throw new Error(
+      "For PKCS12 client-certificate databases, configure libpq PGSSLCERT / PGSSLKEY and use a backup connection without sslidentity",
+    );
   return env;
 }
 export async function pgTool(name, args, url) {

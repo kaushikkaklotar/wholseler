@@ -7,7 +7,7 @@ import {
 
 const configured = {
   DATABASE_URL:
-    "postgresql://user:test-password@db.internal/wholesale?sslmode=require",
+    "postgresql://user:test-password@db.internal/wholesale?sslmode=require&sslaccept=strict",
   WEB_ORIGIN: "https://wholesale.test",
   AUTH_MODE: "sms",
   MSG91_AUTH_KEY: "test-key",

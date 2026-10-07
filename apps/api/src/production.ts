@@ -30,11 +30,13 @@ export function productionConfigChecks(env: Env): LaunchCheck[] {
   );
   check(
     "database-tls",
-    !!database &&
-      ["require", "verify-ca", "verify-full"].includes(
-        database.searchParams.get("sslmode") || "",
-      ),
-    "Database connection must explicitly require TLS (sslmode=require or verify-full)",
+    !!database && database.searchParams.get("sslmode") === "require",
+    "Database connection must explicitly require TLS (sslmode=require)",
+  );
+  check(
+    "database-certificates",
+    database?.searchParams.get("sslaccept") === "strict",
+    "Database connection must validate server certificates (sslaccept=strict)",
   );
   let web: URL | undefined;
   try {

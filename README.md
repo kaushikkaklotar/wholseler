@@ -48,6 +48,7 @@ npm run lint
 npm test
 npm run test:integration
 npm run test:phase1
+npm run test:launch
 npm run build
 ```
 
@@ -55,13 +56,16 @@ The integration suite uses the configured PostgreSQL database, creates isolated 
 
 ## Production configuration
 
-Production startup requires managed PostgreSQL, HTTPS `WEB_ORIGIN`, MSG91 OTP credentials, a strong `OTP_HASH_SECRET`, and S3/R2 private storage. Create the first administrator after migration with:
+Production startup requires PostgreSQL with TLS/certificate validation, exact HTTPS `WEB_ORIGIN`, MSG91 OTP credentials, a strong `OTP_HASH_SECRET`, and S3/R2 private storage. It rejects pending/failed migrations, absent plans/admin, non-UTF8 databases and sample accounts. Initialize plans and the first administrator after migration with:
 
 ```powershell
-node scripts/create-admin.mjs --phone 9876543210 --name "Platform Admin"
+npm run production:bootstrap -- --phone YOUR_ADMIN_MOBILE --name "Platform Admin"
+npm run launch:check
 ```
 
 Launch also needs database backups, real supplier onboarding, DLT/SMS approval, storage credentials, moderation operations and tax/accounting review. Payroll, Telegram import, disputes, Tally/Zoho, AI and logistics integrations remain later phases from the research report.
+
+The container setup, production environment template, provisioning order, safe snapshot backups and restore rehearsals are in [docs/production.md](docs/production.md). Use a fresh production database and do not run the development `setup`/sample seed there. `test:launch` additionally needs matching PostgreSQL tools and CREATE DATABASE privileges; it only changes databases that it creates itself.
 
 ## Notifications and subscription operations
 
