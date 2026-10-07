@@ -44,4 +44,10 @@ The follow-up adds production-only provisioning (plans/admin without demo data),
 - Docker Desktop reported that its engine was not running. A bounded `docker desktop start --timeout 60` attempt was made; subsequent device requests timed out with HTTP 504. Container build/runtime verification remains unconfirmed. Do not retry starting Docker locally during connection recovery; use CI for the container build if necessary.
 - The original Windows main was last verified clean at `16f577b`. No main fast-forward or GitHub push of the launch changes was performed. The original database was started without replacing it. Changes are committed in the working checkout and preserved as an incremental Git bundle.
 
-On reconnection: apply the latest bundle to the review worktree, run the extended `test:launch` suite with `PG_BIN` set, retrieve/finish native checks, then fast-forward the clean original main and push. Production provider credentials, HTTPS deployment, off-host backup scheduling and real pilot acceptance remain required; see [production.md](production.md).
+### Laptop reconnection and consolidation
+
+The original `E:\Kaushik\wholseler` main was subsequently advanced cleanly to `cd992b4`. Its extended `test:launch` suite passed against PostgreSQL 18, including the reordered JSON sidecar and snapshot isolation regression: restored stock remained 20 while the source had advanced to 23. Operational/application typecheck and the optimized production build also completed successfully on the original laptop folder.
+
+Both review revisions were ancestors of the final main and their tracked trees were clean. Their local data and settings were preserved inside the final folder's `.data/retired-worktree-data` before removing the duplicate worktrees. The original running PostgreSQL cluster and environment were retained.
+
+Container build/runtime verification, production provider credentials, HTTPS deployment, off-host backup scheduling and real pilot acceptance remain required; see [production.md](production.md).
