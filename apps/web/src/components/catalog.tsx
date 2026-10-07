@@ -634,14 +634,14 @@ export function ProductEditor({
         imageIds: draft.images.map((i) => i.id),
         variants: draft.variants,
       });
-      await send(
+      const saved = await send<Product>(
         endpoint || (product ? `/products/${product.id}` : "/products"),
         input,
         product ? "PATCH" : "POST",
       );
       toast.success(
         product
-          ? "Product updated and queued for review"
+          ? saved.catalogVersion !== product.catalogVersion ? "Catalog changes saved and queued for review" : "Product saved; catalog approval unchanged"
           : "Product created with an opening stock ledger",
       );
       onSaved();

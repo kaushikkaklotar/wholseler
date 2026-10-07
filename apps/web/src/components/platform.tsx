@@ -26,6 +26,7 @@ import { date, errorMessage, send } from "@/lib/api";
 import { useSession } from "@/components/session";
 import { Subscription } from "./subscription";
 import { OperationsTasks } from "./operations-tasks";
+import { CatalogReviewDialog } from "./catalog-review";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,7 +55,7 @@ import {
   Thumb,
 } from "@/components/common";
 type Review = {
-  kind: "businesses" | "sellers" | "products";
+  kind: "businesses" | "sellers";
   id: string;
   name: string;
   status: string;
@@ -67,6 +68,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
   const { data, error, mutate } = useSWR<PlatformData>("/platform");
   const [statusFilter, setStatusFilter] = useState(""),
     [review, setReview] = useState<Review | null>(null),
+    [catalogReview, setCatalogReview] = useState<string | null>(null),
     [business, setBusiness] = useState<PlatformBusiness | null>(null),
     [plan, setPlan] = useState<Plan | null | undefined>(undefined),
     [catalogBusiness, setCatalogBusiness] = useState<PlatformBusiness | null>(
@@ -474,39 +476,18 @@ export function Platform({ section = "overview" }: { section?: string }) {
                 label: "Status",
                 render: (p) => <Status value={p.moderation} />,
               },
+              { key: "changes", label: "Submission / changes", render: p => <div className="max-w-64 text-xs"><p>{p.revisions[0]?.summary || "Existing entry · no earlier snapshot"}</p>{p.revisions[0] && <p className="mt-1 text-muted-foreground">{p.revisions[0].actor?.name || "Former team member"} · {date(p.revisions[0].createdAt)}</p>}</div> },
               {
                 key: "review",
                 label: "",
                 className: "text-right",
-                render: (p) =>
-                  !ops ? (
+                render: (p) => (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() =>
-                        setReview({
-                          kind: "products",
-                          id: p.id,
-                          name: p.name,
-                          status: p.moderation,
-                          note: p.moderationNote,
-                        })
-                      }
+                      onClick={() => setCatalogReview(p.id)}
                     >
-                      Moderate
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setBusiness(
-                          data.businesses.find((b) => b.id === p.business.id) ||
-                            null,
-                        )
-                      }
-                    >
-                      Onboarding note
+                      {ops ? "View changes" : "Review changes"}
                     </Button>
                   ),
               },
@@ -559,6 +540,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
           ))}
         </div>
       ) : null}
+      {catalogReview && <CatalogReviewDialog key={catalogReview} id={catalogReview} readOnly={ops} onClose={() => setCatalogReview(null)} onSaved={() => { setCatalogReview(null); void mutate(); }} />}
       {review && (
         <ReviewDialog
           key={review.id}
@@ -636,10 +618,7 @@ function ReviewDialog({
     [note, setNote] = useState(review.note),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const statuses =
-    review.kind === "products"
-      ? ["PENDING", "APPROVED", "REJECTED"]
-      : ["PENDING", "VERIFIED", "REJECTED", "SUSPENDED"];
+  const statuses = ["PENDING", "VERIFIED", "REJECTED", "SUSPENDED"];
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -669,9 +648,7 @@ function ReviewDialog({
         <DialogHeader>
           <DialogTitle>Review {review.name}</DialogTitle>
           <DialogDescription>
-            {review.kind === "products"
-              ? "Approving publishes the entry for verified supplier discovery."
-              : "Verification controls public trust status. Suspension revokes active account access."}
+            Verification controls public trust status. Suspension revokes active account access.
           </DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={save}>

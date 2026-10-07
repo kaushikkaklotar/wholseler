@@ -31,6 +31,7 @@ import { Database, audit, notify } from "./database";
 import { parse } from "./validation";
 import { activeBusiness } from "./business-policy";
 import { createHash } from "node:crypto";
+import { catalogSnapshot, catalogChanges, changeSummary, type CatalogSnapshot } from "./catalog-review";
 const productInclude = {
   variants: { where: { archived: false }, orderBy: { size: "asc" as const } },
   images: { select: { id: true } },
@@ -187,6 +188,8 @@ export class CatalogService {
       }));
     if (opening.length) await tx.stockMovement.createMany({ data: opening });
     await this.attach(tx, actor, product.id, imageIds);
+    const saved = await tx.product.findUniqueOrThrow({ where: { id: product.id }, include: productInclude });
+    await this.recordRevision(tx, actor, saved.id, saved.catalogVersion, null, catalogSnapshot(saved));
     await audit(
       tx,
       actor.id,
@@ -196,6 +199,18 @@ export class CatalogService {
       `${product.sku} · ${product.name}`,
     );
     return product;
+  }
+  private async recordRevision(tx: Prisma.TransactionClient, actor: SessionUser, productId: string, version: number, before: CatalogSnapshot | null, after: CatalogSnapshot) {
+    const summary = changeSummary(before, after);
+    await tx.productRevision.create({ data: {
+      productId, version, actorId: actor.id, before: before || Prisma.DbNull, after, summary,
+      images: { connect: [...new Set([...(before?.imageIds || []), ...after.imageIds])].map(id => ({ id })) },
+    } });
+    const team = await tx.user.findMany({ where: { role: { in: ["PLATFORM_ADMIN", "PLATFORM_OPERATIONS"] }, disabled: false }, select: { id: true, role: true } });
+    if (team.length) await tx.notification.createMany({ data: team.map(member => ({
+      businessId: actor.businessId, userId: member.id, title: "Catalog submitted for review", body: `${after.name}: ${summary}`,
+      href: member.role === "PLATFORM_ADMIN" ? "/admin/catalog" : "/operations/catalog", readBy: [],
+    })) });
   }
   async create(actor: SessionUser, body: unknown) {
     const input = parse(productSchema, body);
@@ -220,10 +235,12 @@ export class CatalogService {
           businessId: actor.businessId!,
           moderation: { not: "ARCHIVED" },
         },
-        include: { variants: true },
+        include: productInclude,
       });
       if (!existing) throw new NotFoundException("Product not found");
       const { variants, imageIds, ...data } = input;
+      const before = catalogSnapshot(existing);
+      const after = catalogSnapshot({ ...data, variants, images: imageIds.map(imageId => ({ id: imageId })) });
       for (const variant of variants) {
         if (variant.id) {
           const old = existing.variants.find(
@@ -276,18 +293,22 @@ export class CatalogService {
           },
           data: { archived: true },
         });
+      await this.attach(tx, actor, id, imageIds);
+      if (!catalogChanges(before, after).length) return existing;
       const product = await tx.product.update({
         where: { id },
-        data: { ...data, moderation: "PENDING", moderationNote: "" },
+        data: { ...data, moderation: "PENDING", moderationNote: "", catalogVersion: { increment: 1 },
+          ...(existing.moderation === "APPROVED" && !existing.reviewedSnapshot ? { reviewedSnapshot: before } : {}),
+        },
       });
-      await this.attach(tx, actor, id, imageIds);
+      await this.recordRevision(tx, actor, id, product.catalogVersion, before, after);
       await audit(
         tx,
         actor.id,
         actor.businessId,
         "PRODUCT_UPDATED",
         id,
-        "Catalog changes submitted for review",
+        changeSummary(before, after),
       );
       return product;
     });

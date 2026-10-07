@@ -43,6 +43,7 @@ jobs:
       - run: npm test
       - run: npm run test:integration
       - run: npm run test:phase1
+      - run: npm run test:review
       - name: Install matching PostgreSQL backup tools
         run: |
           sudo apt-get update

@@ -80,6 +80,8 @@ model User {
   payments Payment[]
   returns InvoiceReturn[]
   uploads Upload[]
+  catalogChanges ProductRevision[] @relation("RevisionActor")
+  catalogReviews ProductRevision[] @relation("RevisionReviewer")
 }
 model Session {
   id String @id @default(cuid())
@@ -245,6 +247,8 @@ model Product {
   visibility Visibility @default(PUBLIC)
   moderation Moderation @default(PENDING)
   moderationNote String @default("")
+  catalogVersion Int @default(1)
+  reviewedSnapshot Json?
   tags String[]
   viewCount Int @default(0)
   soldUnits Int @default(0)
@@ -258,9 +262,29 @@ model Product {
   inquiries Inquiry[]
   favorites Favorite[]
   views ProductView[]
+  revisions ProductRevision[]
   @@unique([businessId,sku])
   @@index([businessId,moderation])
   @@index([moderation,category,createdAt])
+}
+model ProductRevision {
+  id String @id @default(cuid())
+  productId String
+  version Int
+  actorId String?
+  before Json?
+  after Json
+  summary String
+  decision Moderation?
+  reviewerId String?
+  reviewedAt DateTime?
+  note String @default("")
+  createdAt DateTime @default(now())
+  product Product @relation(fields:[productId],references:[id],onDelete:Cascade)
+  actor User? @relation("RevisionActor",fields:[actorId],references:[id],onDelete:SetNull)
+  reviewer User? @relation("RevisionReviewer",fields:[reviewerId],references:[id],onDelete:SetNull)
+  images Upload[]
+  @@unique([productId,version])
 }
 model ProductView {
   id String @id @default(cuid())
@@ -450,6 +474,7 @@ model Upload {
   business Business? @relation(fields:[businessId],references:[id])
   user User @relation(fields:[userId],references:[id])
   product Product? @relation(fields:[productId],references:[id])
+  catalogRevisions ProductRevision[]
   @@index([businessId,kind])
 }
 model AuditLog {

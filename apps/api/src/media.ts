@@ -154,13 +154,13 @@ export class MediaService {
   }
   async discard(actor: SessionUser, id: string) {
     const record = await this.db.upload.findFirst({
-      where: { id, userId: actor.id, kind: "PRODUCT", productId: null },
+      where: { id, userId: actor.id, kind: "PRODUCT", productId: null, catalogRevisions: { none: {} } },
     });
     if (!record) return { ok: true };
     if (!/^[a-zA-Z0-9_.-]+$/.test(record.storageKey))
       throw new BadRequestException("Invalid upload");
     const removed = await this.db.upload.deleteMany({
-      where: { id, userId: actor.id, productId: null },
+      where: { id, userId: actor.id, productId: null, catalogRevisions: { none: {} } },
     });
     if (!removed.count) return { ok: true };
     if (this.s3)

@@ -33,6 +33,7 @@ export type Product = {
   visibility: "PUBLIC" | "APPROVED_SELLERS" | "INQUIRY";
   moderation: string;
   moderationNote: string;
+  catalogVersion: number;
   tags: string[];
   stock: number;
   variants: Variant[];
@@ -283,6 +284,7 @@ export type PlatformSeller = {
   createdAt: string;
 };
 export type PlatformProduct = Omit<Product, "variants"> & {
+  revisions: { summary: string; createdAt: string; actor: { name: string } | null }[];
   business: { id: string; name: string; verificationStatus: string };
   _count: { variants: number };
 };

@@ -16,7 +16,7 @@ Source: Wholesale Commerce System Research Report (11 pages). Phase 1 is the int
 | Onboarding/KYC | Business/buyer profiles, marketplace channels, optional GST/PAN and private documents, verification/suspension, product review; no automated legal identity verification |
 | Staff | Live permission matrix, active staff caps, disabled session invalidation and tenant isolation |
 | Subscription | Start/expiry/trial status; monthly/yearly terms, received-payment records and request-key-safe renewals; caps and expiry enforced on server; records accessible after expiry |
-| Operations | Assigned onboarding tasks, categories, due dates, notes and stages; READY requires verified business, published catalog with image and completed tasks |
+| Operations | Admin-managed Operations members (name/mobile, edit, disable/re-enable, OTP Team Login and session revocation); assigned onboarding tasks, categories, due dates, notes and stages; READY requires verified business, published catalog with image and completed tasks |
 | Alerts | In-app notices; consent-based new arrival, stock, inquiry status and manually triggered unpaid-invoice reminders; persistent email/SMS/WhatsApp outbox and honest configured/failed/unknown/accepted states |
 | Reports/support | Daily/monthly sales, products, stock, staff and inquiry reports; support tickets, replies and audits |
 | Storage | Development uploads; private S3/R2 adapter for production |
@@ -35,3 +35,9 @@ Before public launch:
 - Deploy managed PostgreSQL and HTTPS services; schedule backups and demonstrate restore. Use production administrator provisioning, not sample accounts.
 - Perform owner/staff/buyer/admin/operations acceptance with real supplier catalog and review invoice/tax settings.
 - Complete the report's pilot validation: 20 wholesalers and 50 sellers, then track the 30 active wholesaler / 10,000 product / 500 buyer usage goals. These real-world milestones cannot be replaced by automated development tests.
+
+## Catalog review history and Platform Team
+
+Admin → Platform Team → Add Operations Member creates an Operations account from name and a unique mobile. Members use Team Login with OTP. Admin can edit or disable/re-enable members; disabling or changing the login number revokes existing sessions. Open onboarding tasks remain assigned when disabled and can be reassigned in the Onboarding queue. Operations cannot manage platform members or approve catalogs.
+
+Catalog submissions now record the changed fields and both photo sets, the submitting user and time, and the latest review decision. Admin Catalog offers Review changes; Operations Catalog offers View changes. The comparison retains all changes since the last approved snapshot, with individual update history. Historical photos stay private and available to authorized reviewers. Unchanged catalog saves preserve approval; stock and internal low-stock thresholds do not trigger catalog resubmission. A version check rejects approval after a newer edit. Existing products have no reconstructable earlier history; their current details remain reviewable and history begins with subsequent updates.

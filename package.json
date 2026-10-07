@@ -20,6 +20,7 @@
     "test": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs --test",
     "test:integration": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/integration.ts",
     "test:phase1": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/phase1-integration.ts",
+    "test:review": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/review-integration.ts",
     "setup": "npm run db:generate && npm run db:deploy && npm run db:seed",
     "launch:check": "node scripts/run-ts.mjs scripts/check-production.ts",
     "production:bootstrap": "node scripts/run-ts.mjs scripts/bootstrap-production.ts",

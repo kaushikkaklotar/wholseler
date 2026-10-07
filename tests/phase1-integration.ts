@@ -414,9 +414,11 @@ async function main() {
       data: { moderation: "PENDING", publishedAt: null },
     });
     await platform.reviewProduct(adminActor, product.id, {
+      expectedVersion: (await db.product.findUniqueOrThrow({ where: { id: product.id } })).catalogVersion,
       status: "APPROVED",
     });
     await platform.reviewProduct(adminActor, product.id, {
+      expectedVersion: (await db.product.findUniqueOrThrow({ where: { id: product.id } })).catalogVersion,
       status: "APPROVED",
     });
     assert.equal(

@@ -136,6 +136,7 @@ const adminNav: NavItem[] = [
   { label: "Seller approvals", href: "/admin/sellers", icon: UsersRound },
   { label: "Catalog review", href: "/admin/catalog", icon: ShieldCheck },
   { label: "Plans & limits", href: "/admin/plans", icon: CreditCard },
+  { label: "Platform Team", href: "/admin/team", icon: UsersRound },
 ];
 const opsNav: NavItem[] = [
   { label: "Operations overview", href: "/operations", icon: LayoutDashboard },

@@ -15,6 +15,7 @@ import { ReservationModule } from "./reservations";
 import { StockImportModule } from "./stock-import";
 import { OperationsModule } from "./operations";
 import { DeliveryModule } from "./notification-delivery";
+import { PlatformTeamModule } from "./platform-team";
 @Controller("v1")
 class SystemController {
   constructor(@Inject(Database) private readonly db: Database) {}
@@ -54,6 +55,7 @@ class SystemController {
     StockImportModule,
     OperationsModule,
     DeliveryModule,
+    PlatformTeamModule,
   ],
   controllers: [SystemController],
 })

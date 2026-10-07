@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Body,
   Controller,
   Get,
@@ -21,6 +22,7 @@ import { parse } from "./validation";
 import { CatalogModule, CatalogService } from "./catalog";
 import { actions, modules } from "@wholesale/shared";
 import { queueArrivalDeliveries } from "./delivery-queue";
+import { catalogSnapshot, catalogChanges, imageChanges, catalogDetails, type CatalogSnapshot } from "./catalog-review";
 const reviewSchema = z
   .object({
     status: z.enum(["PENDING", "VERIFIED", "REJECTED", "SUSPENDED"]),
@@ -100,6 +102,7 @@ export class PlatformService {
             },
             images: { select: { id: true } },
             _count: { select: { variants: true } },
+            revisions: { orderBy: { version: "desc" }, take: 1, select: { summary: true, createdAt: true, actor: { select: { name: true } } } },
           },
           orderBy: { updatedAt: "desc" },
           take: 500,
@@ -212,6 +215,7 @@ export class PlatformService {
         .object({
           status: z.enum(["APPROVED", "REJECTED", "PENDING"]),
           note: z.string().trim().max(1000).default(""),
+          expectedVersion: z.number().int().min(1),
         })
         .refine(
           (v) => v.status !== "REJECTED" || v.note.length >= 3,
@@ -225,6 +229,8 @@ export class PlatformService {
         include: { images: true, variants: true },
       });
       if (!p) throw new NotFoundException("Product not found");
+      if (p.catalogVersion !== input.expectedVersion)
+        throw new ConflictException("Product changed after you opened the review. Reload the comparison before deciding.");
       if (
         input.status === "APPROVED" &&
         (!p.images.length || !p.variants.some((v) => !v.archived))
@@ -237,11 +243,13 @@ export class PlatformService {
         data: {
           moderation: input.status,
           moderationNote: input.note,
+          ...(input.status === "APPROVED" ? { reviewedSnapshot: catalogSnapshot({ ...p, variants: p.variants.filter(v => !v.archived) }) } : {}),
           ...(input.status === "APPROVED" && !p.publishedAt
             ? { publishedAt: new Date() }
             : {}),
         },
       });
+      await tx.productRevision.updateMany({ where: { productId: id, version: p.catalogVersion }, data: { decision: input.status, reviewerId: actor.id, reviewedAt: new Date(), note: input.note } });
       await audit(
         tx,
         actor.id,
@@ -297,6 +305,25 @@ export class PlatformService {
       }
       return result;
     });
+  }
+  async catalogReview(id: string) {
+    const product = await this.db.product.findFirst({ where: { id, moderation: { not: "ARCHIVED" } }, include: {
+      images: { select: { id: true } }, variants: { where: { archived: false } },
+      business: { select: { name: true, verificationStatus: true } },
+      revisions: { orderBy: { version: "desc" }, take: 30, include: { actor: { select: { name: true } }, reviewer: { select: { name: true } } } },
+    } });
+    if (!product) throw new NotFoundException("Product not found");
+    const current = catalogSnapshot(product);
+    const latest = product.revisions[0];
+    const baseline = (product.reviewedSnapshot || latest?.before || null) as CatalogSnapshot | null;
+    return { id: product.id, name: product.name, version: product.catalogVersion, moderation: product.moderation, note: product.moderationNote,
+      business: product.business, details: catalogDetails(current), currentImages: current.imageIds,
+      comparisonLabel: product.reviewedSnapshot ? "Changes since last approval" : latest?.before ? "Changes in latest update" : "Current submission",
+      baselineAvailable: !!baseline, changes: catalogChanges(baseline, current), images: imageChanges(baseline, current),
+      history: product.revisions.map(r => ({ id: r.id, version: r.version, summary: r.summary, actor: r.actor?.name || "Former team member", createdAt: r.createdAt,
+        decision: r.decision, reviewer: r.reviewer?.name, reviewedAt: r.reviewedAt, note: r.note,
+        changes: catalogChanges(r.before as CatalogSnapshot | null, r.after as CatalogSnapshot), images: imageChanges(r.before as CatalogSnapshot | null, r.after as CatalogSnapshot) })),
+    };
   }
   async plan(actor: SessionUser, id: string | null, body: unknown) {
     const input = parse(planSchema, body);
@@ -390,6 +417,9 @@ export class PlatformController {
   ) {}
   @Get() get() {
     return this.service.overview();
+  }
+  @Get("products/:id/review") catalogReview(@Param("id") id: string) {
+    return this.service.catalogReview(id);
   }
   @Post("businesses/:id/products") createCatalog(
     @Req() req: AuthRequest,
