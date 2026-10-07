@@ -39,8 +39,8 @@ export function CatalogReviewDialog({ id, readOnly, onClose, onSaved }: { id: st
     finally { setBusy(false); }
   }
   async function reload() { setDecision(""); setNote(""); setStale(false); setMessage(""); await mutate(); }
-  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}><DialogContent className="max-h-[88dvh] overflow-y-auto sm:max-w-4xl">
-    <DialogHeader><DialogTitle>{readOnly ? "Catalog changes" : "Review catalog changes"}{data ? ` · ${data.name}` : ""}</DialogTitle><DialogDescription>Compare the submitted details and photos before deciding. Operations can inspect changes; administrators save approval decisions.</DialogDescription></DialogHeader>
+  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose(); }}><DialogContent className="max-h-[88dvh] min-w-0 overflow-y-auto sm:max-w-4xl [&>*]:min-w-0">
+    <DialogHeader><DialogTitle className="break-words">{readOnly ? "Catalog changes" : "Review catalog changes"}{data ? ` · ${data.name}` : ""}</DialogTitle><DialogDescription>Compare the submitted details and photos before deciding. Operations can inspect changes; administrators save approval decisions.</DialogDescription></DialogHeader>
     {error ? <ErrorState error={error} retry={() => void reload()} /> : !data ? <Loading /> : <>
       <div className="rounded-xl bg-muted p-4 text-sm"><p className="font-medium">{data.business.name} · {data.moderation.toLowerCase()}</p><p className="mt-1 text-xs text-muted-foreground">Business: {data.business.verificationStatus.toLowerCase()} · Revision {data.version}</p>{data.history[0] && <p className="mt-2 text-xs">{data.history[0].actor} · {date(data.history[0].createdAt)} {time(data.history[0].createdAt)}<br />{data.history[0].summary}</p>}</div>
       <section><h2 className="mb-3 text-base font-semibold">{data.comparisonLabel}</h2>{data.changes.length ? <Changes rows={data.changes} /> : <p className="text-sm text-muted-foreground">{data.baselineAvailable ? "No differences from the comparison snapshot." : "No earlier snapshot was recorded for this submission. Review the current details and photos below."}</p>}</section>
