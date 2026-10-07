@@ -29,8 +29,28 @@ function run(label, script, args, cwd = root) {
 function stop(code = 0) {
   if (closing) return;
   closing = true;
-  for (const child of children) child.kill("SIGTERM");
-  setTimeout(() => process.exit(code), 1000).unref();
+  const stopped = children.map(
+    (child) =>
+      new Promise((resolve) => {
+        if (child.exitCode !== null || child.signalCode !== null)
+          return resolve();
+        child.once("exit", resolve);
+        child.kill("SIGTERM");
+      }),
+  );
+  const deadline = setTimeout(
+    () => {
+      for (const child of children)
+        if (child.exitCode === null) child.kill("SIGKILL");
+      process.exit(code);
+    },
+    production ? 25000 : 3000,
+  );
+  deadline.unref();
+  Promise.all(stopped).then(() => {
+    clearTimeout(deadline);
+    process.exit(code);
+  });
 }
 process.on("SIGINT", () => stop());
 process.on("SIGTERM", () => stop());
@@ -69,16 +89,41 @@ apiChild.on("exit", (code) => {
   }
 });
 
-run(
-  "Web",
-  path.join(root, "node_modules/next/dist/bin/next"),
-  [
-    production ? "start" : "dev",
-    "--hostname",
-    production ? process.env.WEB_HOST || "127.0.0.1" : "127.0.0.1",
-    "--port",
-    process.env.WEB_PORT || "3000",
-  ],
-  path.join(root, "apps/web"),
-);
+if (production && process.env.WEB_STANDALONE === "true") {
+  process.env.PORT = process.env.WEB_PORT || "3000";
+  // Next's generated server consumes HOSTNAME directly.
+  const standaloneEnv = {
+    ...process.env,
+    HOSTNAME: process.env.WEB_HOST || "127.0.0.1",
+  };
+  const web = spawn(
+    process.execPath,
+    [path.join(root, "apps/web/.next/standalone/apps/web/server.js")],
+    {
+      cwd: root,
+      env: standaloneEnv,
+      stdio: "inherit",
+    },
+  );
+  children.push(web);
+  web.on("exit", (code) => {
+    if (!closing) {
+      console.error(`Web exited (${code}).`);
+      stop(code ?? 1);
+    }
+  });
+} else {
+  run(
+    "Web",
+    path.join(root, "node_modules/next/dist/bin/next"),
+    [
+      production ? "start" : "dev",
+      "--hostname",
+      production ? process.env.WEB_HOST || "127.0.0.1" : "127.0.0.1",
+      "--port",
+      process.env.WEB_PORT || "3000",
+    ],
+    path.join(root, "apps/web"),
+  );
+}
 console.log(`Wholseler: http://127.0.0.1:${process.env.WEB_PORT || 3000}`);

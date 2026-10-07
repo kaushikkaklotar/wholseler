@@ -20,7 +20,12 @@
     "test": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs --test",
     "test:integration": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/integration.ts",
     "test:phase1": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/phase1-integration.ts",
-    "setup": "npm run db:generate && npm run db:deploy && npm run db:seed"
+    "setup": "npm run db:generate && npm run db:deploy && npm run db:seed",
+    "launch:check": "node scripts/run-ts.mjs scripts/check-production.ts",
+    "production:bootstrap": "node scripts/run-ts.mjs scripts/bootstrap-production.ts",
+    "db:backup": "node scripts/db-backup.mjs",
+    "db:restore-check": "node scripts/db-restore-check.mjs",
+    "test:launch": "npm run build -w @wholesale/shared && node scripts/run-ts.mjs tests/launch-integration.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

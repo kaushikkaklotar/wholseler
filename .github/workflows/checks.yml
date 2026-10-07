@@ -1,0 +1,56 @@
+name: Product checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: wholesale_test
+          POSTGRES_PASSWORD: ci_test_only
+          POSTGRES_DB: wholesale_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U wholesale_test -d wholesale_test"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://wholesale_test:ci_test_only@localhost:5432/wholesale_test?schema=public
+      AUTH_MODE: development
+      OTP_HASH_SECRET: ci-test-only-long-secret-for-isolated-database
+      STORAGE_MODE: local
+      NOTIFICATION_MODE: local
+      SEED_SAMPLE_DATA: "false"
+      WEB_ORIGIN: http://127.0.0.1:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:deploy
+      - run: npm run production:bootstrap -- --phone 9876543210 --name "CI Administrator"
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run test:phase1
+      - name: Install matching PostgreSQL backup tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
+      - run: npm run test:launch
+        env:
+          PG_BIN: /usr/lib/postgresql/18/bin
+      - run: npm run build
+      - run: docker build --tag wholseler:ci .

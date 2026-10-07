@@ -12,6 +12,7 @@ import {
 } from "@wholesale/shared";
 import { Database } from "../../apps/api/src/database";
 import { BillingService } from "../../apps/api/src/billing";
+import { defaultPlans } from "./default-plans";
 config({ path: path.resolve(".env"), quiet: true });
 if (
   process.env.NODE_ENV === "production" ||
@@ -97,40 +98,12 @@ async function main() {
       update: {},
     });
   }
-  const plans = [
-    {
-      id: "plan-starter",
-      name: "Starter",
-      monthlyPricePaise: 99900,
-      yearlyPricePaise: 999900,
-      productLimit: 500,
-      staffLimit: 3,
-      bulkImport: false,
-      advancedReports: false,
-    },
-    {
-      id: "plan-growth",
-      name: "Growth",
-      monthlyPricePaise: 199900,
-      yearlyPricePaise: 1999900,
-      productLimit: 3000,
-      staffLimit: 8,
-      bulkImport: true,
-      advancedReports: true,
-    },
-    {
-      id: "plan-pro",
-      name: "Pro",
-      monthlyPricePaise: 349900,
-      yearlyPricePaise: 3499900,
-      productLimit: 10000,
-      staffLimit: 20,
-      bulkImport: true,
-      advancedReports: true,
-    },
-  ];
-  for (const plan of plans)
-    await db.plan.upsert({ where: { id: plan.id }, create: plan, update: {} });
+  for (const plan of defaultPlans) {
+    const found = await db.plan.findFirst({
+      where: { OR: [{ id: plan.id }, { name: plan.name }] },
+    });
+    if (!found) await db.plan.create({ data: plan });
+  }
   const existed = await db.business.findUnique({
     where: { id: "sample-surati" },
   });

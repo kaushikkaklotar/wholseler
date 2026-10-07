@@ -15,6 +15,8 @@ import helmet from "helmet";
 import type { Request, Response, NextFunction } from "express";
 import { json } from "express";
 import { AppModule } from "./module";
+import { assertProductionConfig, productionDataChecks } from "./production";
+import { Database } from "./database";
 config({
   path: path.resolve(process.env.WHOLESALE_ROOT || process.cwd(), ".env"),
   quiet: true,
@@ -29,12 +31,10 @@ class Errors implements ExceptionFilter {
       "type" in exception &&
       exception.type === "entity.too.large"
     ) {
-      res
-        .status(413)
-        .json({
-          message:
-            "Import request is too large. Use fewer rows or shorter descriptions",
-        });
+      res.status(413).json({
+        message:
+          "Import request is too large. Use fewer rows or shorter descriptions",
+      });
       return;
     }
     if (exception instanceof HttpException) {
@@ -79,28 +79,32 @@ async function bootstrap() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   if (!process.env.OTP_HASH_SECRET || process.env.OTP_HASH_SECRET.length < 32)
     throw new Error("OTP_HASH_SECRET must have at least 32 characters");
-  if (
-    production &&
-    (process.env.AUTH_MODE !== "sms" ||
-      !process.env.MSG91_AUTH_KEY ||
-      !process.env.MSG91_TEMPLATE_ID ||
-      process.env.OTP_HASH_SECRET.includes("replace-with"))
-  )
-    throw new Error(
-      "Production requires configured SMS authentication and a strong OTP_HASH_SECRET",
-    );
-  if (
-    production &&
-    (process.env.STORAGE_MODE !== "s3" ||
-      !process.env.S3_BUCKET ||
-      !process.env.S3_ACCESS_KEY_ID ||
-      !process.env.S3_SECRET_ACCESS_KEY)
-  )
-    throw new Error("Production requires S3/R2 image storage");
+  if (production) assertProductionConfig(process.env);
   const origin = process.env.WEB_ORIGIN || "http://127.0.0.1:3000";
-  if (production && !origin.startsWith("https://"))
-    throw new Error("Production requires an HTTPS WEB_ORIGIN");
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+  if (production) {
+    try {
+      const checks = await productionDataChecks(
+        app.get(Database),
+        process.env.WHOLESALE_ROOT || process.cwd(),
+      );
+      const failures = checks.filter((c) => c.status === "FAIL");
+      if (failures.length)
+        throw new Error(
+          `Production database blocked: ${failures.map((c) => c.id).join(", ")}. Run npm run launch:check.`,
+        );
+    } catch (error) {
+      await app.close();
+      if (
+        error instanceof Error &&
+        error.message.startsWith("Production database blocked:")
+      )
+        throw error;
+      throw new Error(
+        "Production database assessment failed. Check connectivity, migrations and bootstrap.",
+      );
+    }
+  }
   app.use(json({ limit: "2mb" }));
   app.enableShutdownHooks();
   app.useGlobalFilters(new Errors());
