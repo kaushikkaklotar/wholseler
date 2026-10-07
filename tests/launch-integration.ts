@@ -169,6 +169,17 @@ async function main() {
       (await readdir(dir)).find((n) => n.endsWith(".dump"))!,
     );
     assert.ok(file.endsWith(".dump"));
+    const sidecar = JSON.parse(await readFile(`${file}.json`, "utf8"));
+    // Valid JSON formatting / source collation must not change count validation.
+    sidecar.tables = Object.fromEntries(
+      Object.entries(sidecar.tables).reverse(),
+    );
+    await writeFile(`${file}.json`, JSON.stringify(sidecar));
+    // Source writes after the backup must not affect restored snapshot values.
+    await db.variant.update({
+      where: { id: product.variants[0].id },
+      data: { stock: 23 },
+    });
     const restoreArgs = [
       "scripts/db-restore-check.mjs",
       "--archive",
@@ -218,8 +229,16 @@ async function main() {
       (await db.product.findUniqueOrThrow({ where: { id: product.id } })).name,
       product.name,
     );
+    assert.equal(
+      (
+        await db.variant.findUniqueOrThrow({
+          where: { id: product.variants[0].id },
+        })
+      ).stock,
+      23,
+    );
     console.log(
-      "Launch integration passed: fresh provisioning, preserved pricing, no account promotion, sample rejection, owner onboarding, UTF8 stock restore, existing-target and corrupt-backup rejection.",
+      "Launch integration passed: fresh provisioning, preserved pricing, no account promotion, sample rejection, owner onboarding, UTF8 stock snapshot restore, reordered sidecar, existing-target and corrupt-backup rejection.",
     );
   } finally {
     await target?.$disconnect();

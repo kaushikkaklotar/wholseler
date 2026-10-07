@@ -69,7 +69,13 @@ async function main() {
     );
     target = client(targetUrl);
     const counts = await tableCounts(target);
-    if (JSON.stringify(counts) !== JSON.stringify(manifest.tables))
+    // JSON key order can differ when the source and recovery database use
+    // different collations, or an operator reformats the sidecar.
+    const keys = Object.keys(counts);
+    if (
+      keys.length !== Object.keys(manifest.tables).length ||
+      keys.some((key) => counts[key] !== manifest.tables[key])
+    )
       throw new Error(
         "Restore counts differ from the backup snapshot; target retained for inspection. Application configuration was not changed.",
       );
