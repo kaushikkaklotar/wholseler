@@ -15,5 +15,6 @@ test("Researched supplier data has business contacts and same-site HTTPS provena
       assert.equal(supplierListingSchema.safeParse({ ...row, ...extra }).success, false);
     assert.equal(supplierListingSchema.safeParse({ ...row, sourceUrl: "javascript:alert(1)" }).success, false);
     assert.equal(supplierListingSchema.safeParse({ ...row, website: "http://example.test" }).success, false);
+    assert.equal(supplierListingSchema.safeParse({ ...row, website: "not a URL", sourceUrl: "not a URL" }).success, false);
   }
 });

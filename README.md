@@ -21,6 +21,8 @@ A document aligned B2B wholesale operating system for textile and apparel market
 
 The exact report mapping and current limits are in [docs/requirements.md](docs/requirements.md).
 
+The public [Surat supplier directory](docs/supplier-directory.md) contains eight source-backed business contacts. After migrations, run `npm run directory:import` to import or update them. These listings do not invent inventory, prices or verified member accounts. Public discovery excludes sample and disabled-owner accounts.
+
 ## Local setup (Windows)
 
 ```powershell

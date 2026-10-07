@@ -2,9 +2,20 @@ import { z } from "zod";
 import type { PrismaClient } from "@prisma/client";
 
 const httpsUrl = z.string().url().refine((value) => {
-  const url = new URL(value);
-  return url.protocol === "https:" && !url.username && !url.password;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
 }, "Use a public HTTPS source");
+function hostname(value: string) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
 export const supplierListingSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{3,80}$/),
   name: z.string().trim().min(2).max(120),
@@ -18,7 +29,10 @@ export const supplierListingSchema = z.object({
   website: httpsUrl,
   sourceUrl: httpsUrl,
   checkedAt: z.string().datetime(),
-}).strict().refine((value) => new URL(value.website).hostname.replace(/^www\./, "") === new URL(value.sourceUrl).hostname.replace(/^www\./, ""), "Source must belong to the business website");
+}).strict().refine((value) => {
+  const site = hostname(value.website);
+  return !!site && site === hostname(value.sourceUrl);
+}, "Source must belong to the business website");
 
 export async function importSupplierListings(db: PrismaClient, input: unknown) {
   const rows = z.array(supplierListingSchema).min(1).max(200).parse(input);
