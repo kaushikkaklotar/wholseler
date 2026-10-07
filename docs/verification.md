@@ -62,4 +62,10 @@ Browser checks used this isolated database and local OTPs. The homepage showed a
 
 During the final buyer registration check, desktop command responses stopped; a follow-up returned HTTP 504 even though device inventory still listed the system online. Buyer-directory verification, stopping the isolated QA server, restarting the normal app, and pushing these revisions are unconfirmed. The normal `.env` was not changed. The isolated server may still be running on ports 3000/3001; it must be stopped before the normal app starts. Do not drop the original database or stop its PostgreSQL server.
 
-A final URL validation regression in the working checkout makes malformed directory URLs return validation errors rather than throwing from `new URL`. Cloud unit and operations checks cover this fix; it still needs to be applied to the system.
+A final URL validation regression makes malformed directory URLs return validation errors rather than throwing from `new URL`. Cloud unit and operations checks cover this fix.
+
+### System reconnection — 7 October, afternoon
+
+The connection recovered. The final URL validation fix was applied in the original folder and all 13 native unit tests passed. The isolated QA server was stopped and only `qa_flow_20261007_fe0efc8a91` was removed. The original PostgreSQL server and `.env` were retained. The normal development app was restarted on ports 3000/3001; its API confirmed eight supplier listings and development OTP mode. The `23acd7b` code release was pushed, and GitHub main and the local tracking branch were verified against that commit.
+
+The buyer account was then signed in with a local OTP in the isolated browser test session against the original database. `/seller/suppliers` displayed all eight directory businesses with telephone, website and source links. Chrome was launched with six requested tabs for the public website, owner, staff billing, buyer, admin and operations. These tabs share the normal browser profile's session; switch roles by signing out, or use separate profiles when simultaneous roles are needed.
