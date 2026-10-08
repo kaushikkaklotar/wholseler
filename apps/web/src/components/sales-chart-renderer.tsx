@@ -32,14 +32,14 @@ export function SalesChart({
         >
           <defs>
             <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#7169e6" stopOpacity={0.16} />
-              <stop offset="100%" stopColor="#7169e6" stopOpacity={0.01} />
+              <stop offset="0%" stopColor="#087f78" stopOpacity={0.16} />
+              <stop offset="100%" stopColor="#087f78" stopOpacity={0.01} />
             </linearGradient>
           </defs>
           <CartesianGrid
             strokeDasharray="4 4"
             vertical={false}
-            stroke="#eff0f5"
+            stroke="#dee5e8"
           />
           <XAxis
             dataKey="date"
@@ -47,14 +47,14 @@ export function SalesChart({
             tickLine={false}
             tickMargin={12}
             minTickGap={35}
-            tick={{ fill: "#9295a3", fontSize: 10 }}
+            tick={{ fill: "#61717d", fontSize: 11 }}
             tickFormatter={(v) => date(v, { day: "numeric", month: "short" })}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
             width={55}
-            tick={{ fill: "#9295a3", fontSize: 10 }}
+            tick={{ fill: "#61717d", fontSize: 11 }}
             tickFormatter={(v) =>
               v >= 100000
                 ? `₹${Math.round(v / 100000)}k`
@@ -62,12 +62,12 @@ export function SalesChart({
             }
           />
           <Tooltip
-            cursor={{ stroke: "#bbb5ee", strokeDasharray: "3 3" }}
+            cursor={{ stroke: "#087f78", strokeDasharray: "3 3" }}
             contentStyle={{
-              border: "1px solid #e8e9ef",
+              border: "1px solid var(--border)",
               borderRadius: 10,
-              fontSize: 11,
-              boxShadow: "0 4px 18px #17233d0d",
+              fontSize: 12,
+              boxShadow: "var(--shadow-popover)",
             }}
             formatter={(value) => [money(Number(value)), "Net sales"]}
             labelFormatter={(value) => date(String(value))}
@@ -75,7 +75,7 @@ export function SalesChart({
           <Area
             type="monotone"
             dataKey="salesPaise"
-            stroke="#7169e6"
+            stroke="#087f78"
             strokeWidth={2.5}
             fill="url(#salesFill)"
             activeDot={{ r: 5, stroke: "white", strokeWidth: 3 }}

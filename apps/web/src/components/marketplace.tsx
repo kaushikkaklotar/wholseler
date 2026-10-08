@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
@@ -65,13 +66,13 @@ export function PublicHeader() {
     { user } = useSession();
   return (
     <header className="market-header sticky top-0 z-30 border-b bg-card/95 backdrop-blur-md">
-      <div className="mx-auto flex h-20 max-w-7xl items-center gap-8 px-5 lg:px-10">
-        <Link href="/" aria-label="Wholseler home">
+      <div className="mx-auto flex h-[76px] max-w-7xl items-center gap-6 px-5 lg:px-10">
+        <Link href="/" aria-label="BulkSaathi home">
           <Brand />
         </Link>
         <nav
           aria-label="Main navigation"
-          className="ml-6 hidden items-center gap-7 text-sm text-muted-foreground lg:flex"
+          className="ml-2 hidden items-center gap-5 text-[13px] text-muted-foreground lg:flex"
         >
           <Link href="/marketplace" className="hover:text-primary">
             Marketplace
@@ -186,15 +187,15 @@ export function PublicFooter() {
         </div>
       </div>
       <div className="mx-auto flex max-w-7xl flex-wrap justify-between gap-2 border-t px-5 py-5 text-xs text-muted-foreground lg:px-10">
-        <span>© {new Date().getFullYear()} Wholseler</span>
-        <span>Products and commercial terms are provided by suppliers.</span>
+        <span>© {new Date().getFullYear()} BulkSaathi</span>
+        <a href="https://www.viratsoftwaresolutions.com/" target="_blank" rel="noopener noreferrer" className="hover:text-primary">Design and developed by Virat Software Solutions</a>
       </div>
     </footer>
   );
 }
 function ProductCard({ product }: { product: MarketProduct }) {
   return (
-    <article className="group overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-lg">
+    <article className="market-product-card group overflow-hidden border bg-card">
       <Link href={`/marketplace/${product.id}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           {product.images[0] ? (
@@ -204,14 +205,14 @@ function ProductCard({ product }: { product: MarketProduct }) {
               fill
               sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 300px"
               unoptimized
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
               <Package className="size-14 text-muted-foreground/30" />
             </div>
           )}
-          <span className="absolute left-3 top-3 rounded-full bg-card/95 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide">
+          <span className="absolute left-3 top-3 rounded-full bg-card/95 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide">
             {product.category}
           </span>
         </div>
@@ -288,109 +289,37 @@ export function MarketplaceHome() {
       <PublicHeader />
       <main>
         <section className="market-hero border-b">
-          <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:px-10 lg:py-20">
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-14 lg:grid-cols-[1.15fr_1fr] lg:items-center lg:px-10 lg:py-18">
             <div>
-              <p className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-primary">
-                <span className="size-2 rounded-full bg-primary" />
-                For the people who keep markets moving
-              </p>
-              <h1 className="max-w-xl text-5xl font-semibold leading-[1.07] tracking-[-2.5px] sm:text-6xl lg:text-7xl">
-                Your next
-                <br />
-                best seller.
-                <br />
-                <span className="text-primary">Starts here.</span>
-              </h1>
-              <p className="mt-7 max-w-md text-base leading-7 text-muted-foreground">
-                Explore wholesale collections, find the right supplier and
-                source directly. Less searching around. More moving forward.
-              </p>
-              <form
-                action="/marketplace"
-                className="mt-8 flex max-w-lg items-center gap-2 rounded-2xl border bg-card p-2 shadow-sm"
-              >
+              <p className="mb-5 text-xs font-semibold uppercase tracking-[.12em] text-primary">Wholesale marketplace</p>
+              <h1 className="market-hero-title max-w-xl">Find products.<br /><span className="text-primary">Meet your next supplier.</span></h1>
+              <p className="mt-6 max-w-lg text-base leading-7 text-muted-foreground">Explore wholesale catalogs, compare product details and connect directly with suppliers. Your next business partnership starts with a conversation.</p>
+              <form action="/marketplace" className="market-search mt-8 flex max-w-lg items-center gap-2 border bg-card p-2">
                 <Search className="ml-3 size-5 shrink-0 text-muted-foreground" />
-                <Input
-                  name="q"
-                  aria-label="Search the marketplace"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Try kurtis, sarees or a supplier…"
-                  className="h-11 min-w-0 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0"
-                />
-                <Button type="submit" className="h-11 rounded-xl">
-                  Explore
-                  <ArrowRight className="hidden sm:block" />
-                </Button>
+                <Input name="q" aria-label="Search the marketplace" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search products or suppliers" className="h-11 min-w-0 border-0 bg-transparent px-1 shadow-none focus-visible:ring-0" />
+                <Button type="submit" className="h-11">Search<ArrowRight className="hidden sm:block" /></Button>
               </form>
-              <div className="mt-5 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                <Link
-                  href="/marketplace?category=Kurtis"
-                  className="hover:text-primary"
-                >
-                  Kurtis ↗
-                </Link>
-                <Link
-                  href="/marketplace?category=Sarees"
-                  className="hover:text-primary"
-                >
-                  Sarees ↗
-                </Link>
-                <Link
-                  href="/marketplace?category=Menswear"
-                  className="hover:text-primary"
-                >
-                  Menswear ↗
-                </Link>
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                <span>Popular:</span>
+                <Link href="/marketplace?category=Kurtis" className="underline-offset-4 hover:text-primary hover:underline">Kurtis</Link>
+                <Link href="/marketplace?category=Sarees" className="underline-offset-4 hover:text-primary hover:underline">Sarees</Link>
+                <Link href="/marketplace?category=Menswear" className="underline-offset-4 hover:text-primary hover:underline">Menswear</Link>
               </div>
+              <p className="mt-8 flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-4 text-primary" />Browse freely. Create an account to save products and send inquiries.</p>
             </div>
-            <div className="hero-market-card relative overflow-hidden rounded-3xl border bg-card p-5 shadow-xl sm:p-7">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
-                    Your sourcing desk
-                  </p>
-                  <p className="mt-2 text-xl font-semibold tracking-tight">
-                    A market full of possibilities.
-                  </p>
-                </div>
-                <Boxes className="size-8 text-primary" />
-              </div>
-              <div className="mt-7 grid grid-cols-2 gap-3">
-                {[
-                  ["Kurtis", "Everyday to occasion", "01"],
-                  ["Sarees", "Fresh collections", "02"],
-                  ["Menswear", "Ready for your shelves", "03"],
-                  ["Home textiles", "The finishing touches", "04"],
-                ].map(([name, description, index]) => (
-                  <Link
-                    key={name}
-                    href={`/marketplace?category=${encodeURIComponent(name)}`}
-                    className="hero-category rounded-2xl border p-5 transition-colors hover:border-primary"
-                  >
-                    <p className="font-mono text-xs text-primary/60">
-                      /{index}
-                    </p>
-                    <div className="my-6 flex justify-center">
-                      <CategoryIcon
-                        category={name}
-                        className="size-14 text-primary"
-                      />
-                    </div>
-                    <p className="font-semibold">
-                      {name}
-                      <ArrowRight className="float-right mt-1 size-4" />
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      {description}
-                    </p>
+            <div className="category-directory overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-5"><h2 className="text-base font-semibold">Browse by category</h2><LayoutGrid className="size-4 text-muted-foreground" /></div>
+              <div>
+                {[["Kurtis", "Everyday & occasion wear", "01"], ["Sarees", "Traditional & contemporary collections", "02"], ["Menswear", "Clothing for your retail shelves", "03"], ["Home textiles", "Fabrics & home essentials", "04"]].map(([name, description, index]) => (
+                  <Link key={name} href={`/marketplace?category=${encodeURIComponent(name)}`} className="category-directory-link">
+                    <span className="category-number">{index}</span>
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-secondary"><CategoryIcon category={name} className="size-5 text-primary" /></span>
+                    <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{name}</span><span className="mt-1 block text-xs text-muted-foreground">{description}</span></span>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
                   </Link>
                 ))}
               </div>
-              <div className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="size-4 text-primary" />
-                Published catalogs from verified businesses
-              </div>
+              <div className="flex items-center gap-2 border-t bg-muted/40 px-6 py-4 text-xs text-muted-foreground"><ShieldCheck className="size-4 shrink-0 text-primary" />Published catalogs from verified businesses</div>
             </div>
           </div>
         </section>
@@ -432,7 +361,7 @@ export function MarketplaceHome() {
                 Explore the catalog
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-                Fresh finds for your business.
+                Products from wholesale catalogs.
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Available products from published wholesale catalogs.
@@ -462,12 +391,10 @@ export function MarketplaceHome() {
                 For wholesalers
               </p>
               <h2 className="mt-5 max-w-md text-4xl font-semibold leading-tight tracking-[-1.5px]">
-                The busy counter.
-                <br />
-                The growing catalog.
+                Catalog, inventory and billing.
                 <br />
                 <span className="text-muted-foreground">
-                  One clear workspace.
+                  One organised workspace.
                 </span>
               </h2>
               <p className="mt-5 max-w-md text-sm leading-7 text-muted-foreground">
@@ -515,7 +442,7 @@ export function MarketplaceHome() {
                 return (
                   <div
                     key={String(title)}
-                    className="rounded-2xl border bg-background p-6"
+                    className="rounded-lg border bg-card p-6"
                   >
                     <I className="size-6 text-primary" />
                     <h3 className="mt-5 text-base font-semibold">
@@ -538,7 +465,7 @@ export function MarketplaceHome() {
             From browsing to business
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-            A shorter route to the right supplier.
+            How sourcing works on BulkSaathi.
           </h2>
           <div className="mt-10 grid gap-8 sm:grid-cols-3">
             {[
@@ -575,7 +502,7 @@ export function MarketplaceHome() {
                 Wholesaler plans
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-                Room for the way you work.
+                Choose a plan for your business.
               </h2>
               <p className="mt-3 text-sm text-muted-foreground">
                 Buyer discovery is free. Business plans include catalog,
@@ -596,7 +523,7 @@ export function MarketplaceHome() {
                 {plans.map((plan, index) => (
                   <article
                     key={plan.id}
-                    className={`relative rounded-2xl border p-7 ${index === 1 ? "border-primary bg-secondary/40" : "bg-background"}`}
+                    className={`relative rounded-lg border p-7 ${index === 1 ? "border-primary bg-secondary/40" : "bg-background"}`}
                   >
                     <p className="text-base font-semibold">{plan.name}</p>
                     <p className="mt-6 text-3xl font-semibold tracking-tight">
@@ -650,7 +577,7 @@ export function MarketplaceHome() {
                 A few things to know
               </p>
               <h2 className="mt-3 text-3xl font-semibold tracking-tight">
-                Before you get started.
+                Frequently asked questions.
               </h2>
             </div>
             <div className="divide-y">
@@ -661,7 +588,7 @@ export function MarketplaceHome() {
                 ],
                 [
                   "Who handles payments and delivery?",
-                  "You agree on pricing, payments and dispatch directly with the supplier. Wholseler records inquiries; it does not process marketplace orders or payments.",
+                  "You agree on pricing, payments and dispatch directly with the supplier. BulkSaathi records inquiries; it does not process marketplace orders or payments.",
                 ],
                 [
                   "How does a wholesaler get listed?",
@@ -734,7 +661,7 @@ export function MarketplaceBrowse() {
             setSearch(query);
             setPage(1);
           }}
-          className="mt-8 flex flex-wrap items-end gap-3 rounded-2xl border bg-card p-4"
+          className="mt-8 flex flex-wrap items-end gap-3 rounded-lg border bg-card p-4"
         >
           <div className="min-w-48 flex-1">
             <label
@@ -758,7 +685,7 @@ export function MarketplaceBrowse() {
             >
               Category
             </label>
-            <select
+            <SearchSelect
               id="market-category"
               value={category}
               onChange={(e) => {
@@ -771,7 +698,7 @@ export function MarketplaceBrowse() {
               {categories.map((c) => (
                 <option key={c}>{c}</option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
           <div className="min-w-32">
             <label
@@ -863,7 +790,7 @@ export function MarketplaceDetail({ id }: { id: string }) {
           <Loading />
         ) : (
           <div className="grid items-start gap-10 lg:grid-cols-2">
-            <div className="relative aspect-square overflow-hidden rounded-3xl border bg-muted">
+            <div className="relative aspect-square overflow-hidden rounded-xl border bg-muted">
               {product.images[0] ? (
                 <Image
                   src={product.images[0].url}

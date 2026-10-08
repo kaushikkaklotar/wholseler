@@ -215,7 +215,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         user.role === "WHOLESALER_OWNER"),
   );
   const context = seller
-    ? "Seller workspace"
+    ? "Buyer workspace"
     : admin
       ? "Platform administration"
       : ops
@@ -255,21 +255,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
     router.push(href);
   }
   const sidebar = (
-    <div className="flex h-full flex-col bg-[#171b29] px-4 pb-5 pt-7 text-[#afb3c3]">
+    <div className="workspace-sidebar flex h-full flex-col overflow-y-auto px-4 pb-5 pt-7">
       <div className="px-2">
         <Link href={home(user)} onClick={() => setMobileOpen(false)}>
-          <Brand dark />
+          <Brand />
         </Link>
       </div>
-      <div className="mb-7 mt-7 flex items-center gap-2.5 rounded-lg border border-white/10 bg-white/[.035] px-3 py-3">
-        <span className="flex size-8 items-center justify-center rounded-md bg-white/7">
-          <Store className="size-4 text-[#c4c6d5]" />
+      <div className="workspace-account mb-6 mt-7 flex items-center gap-2.5 rounded-md px-3 py-3">
+        <span className="flex size-8 items-center justify-center rounded-md bg-card">
+          <Store className="size-4 text-primary" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-medium text-[#f1f2f8]">
+          <p className="truncate text-[13px] font-medium text-foreground">
             {user.businessName || user.name}
           </p>
-          <p className="mt-0.5 text-[10px] text-[#71788f]">
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             {seller
               ? "Sourcing account"
               : admin
@@ -281,9 +281,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     : `${user.plan?.name} workspace`}
           </p>
         </div>
-        <ChevronDown className="size-3 text-[#6e758d]" />
+
       </div>
-      <p className="mb-3 px-3 text-[9px] font-medium tracking-[.16em] text-[#626b83]">
+      <p className="workspace-section-label mb-3 px-3">
         {seller ? "SOURCING" : admin || ops ? "PLATFORM" : "WORKSPACE"}
       </p>
       <nav className="space-y-1">
@@ -292,24 +292,25 @@ export function Shell({ children }: { children: React.ReactNode }) {
           return (
             <div key={item.href}>
               {item.group && nav[index - 1]?.group !== item.group && (
-                <p className="mb-3 mt-7 px-3 text-[9px] font-medium tracking-[.16em] text-[#626b83]">
+                <p className="workspace-section-label mb-3 mt-6 px-3">
                   {item.group}
                 </p>
               )}
               <Link
                 href={item.href}
                 onClick={() => setMobileOpen(false)}
+                aria-current={active(item.href) ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[12px] transition-colors",
+                  "workspace-nav-link flex items-center gap-3 rounded-md px-3 py-2.5",
                   active(item.href)
-                    ? "bg-[#635bdf] font-medium text-white shadow-sm"
-                    : "hover:bg-white/5 hover:text-white",
+                    ? "is-active"
+                    : "",
                 )}
               >
                 <Icon className="size-[17px]" />
                 {item.label}
                 {active(item.href) && (
-                  <span className="ml-auto size-1 rounded-full bg-white/70" />
+                  <span className="ml-auto size-1 rounded-full bg-primary" />
                 )}
               </Link>
             </div>
@@ -319,10 +320,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
           href="/support"
           onClick={() => setMobileOpen(false)}
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[12px]",
+            "workspace-nav-link flex items-center gap-3 rounded-md px-3 py-2.5",
             pathname === "/support"
-              ? "bg-[#635bdf] text-white"
-              : "hover:bg-white/5 hover:text-white",
+              ? "is-active"
+              : "",
           )}
         >
           <CircleHelp className="size-[17px]" />
@@ -331,29 +332,29 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </nav>
       <div className="mt-auto pt-7">
         {user.plan && user.role === "WHOLESALER_OWNER" && (
-          <div className="mb-5 rounded-lg border border-white/8 bg-white/[.025] px-3 py-3">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-medium text-[#d9dbeb]">
+          <div className="workspace-plan mb-5 rounded-md px-3 py-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-foreground">
                 {user.plan.name} plan
               </span>
-              <span className="rounded bg-[#393457] px-1.5 py-0.5 text-[9px] text-[#beb8fc]">
+              <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-primary">
                 ACTIVE
               </span>
             </div>
-            <p className="mt-2 text-[10px] leading-5 text-[#777f97]">
+            <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
               {user.plan.staffLimit} team members ·{" "}
               {user.plan.productLimit.toLocaleString("en-IN")} products
             </p>
             <Link
               href="/support?category=SUBSCRIPTION"
-              className="mt-2 flex items-center justify-between text-[10px] text-[#bdb5fa]"
+              className="mt-2 flex items-center justify-between text-[11px] text-primary"
             >
               Manage subscription
               <ChevronRight className="size-3" />
             </Link>
           </div>
         )}
-        <div className="flex items-center gap-2 px-2 text-[10px] text-[#727c95]">
+        <div className="flex items-center gap-2 px-2 text-[11px] text-muted-foreground">
           <span
             className={cn(
               "size-1.5 rounded-full",
@@ -369,7 +370,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   );
   return (
     <div className="min-h-screen">
-      <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden w-[228px] lg:block">
+      <aside className="app-sidebar fixed inset-y-0 left-0 z-30 hidden lg:block">
         {sidebar}
       </aside>
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -380,8 +381,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {sidebar}
         </SheetContent>
       </Sheet>
-      <div className="app-main lg:ml-[228px]">
-        <header className="app-topbar sticky top-0 z-20 flex h-[76px] items-center justify-between gap-4 border-b bg-white/95 px-5 backdrop-blur-md sm:px-8">
+      <div className="app-main">
+        <header className="app-topbar sticky top-0 z-20 flex items-center justify-between gap-4 border-b px-5 sm:px-8">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -393,14 +394,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Menu />
             </Button>
             <div>
-              <p className="text-[10px] text-muted-foreground">{context}</p>
-              <p className="mt-1 text-[12px] font-medium">{title}</p>
+              <p className="text-[11px] text-muted-foreground">{context}</p>
+              <p className="mt-1 text-[13px] font-medium">{title}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 sm:gap-5">
             <button
               onClick={() => setCommandOpen(true)}
-              className="hidden h-9 w-[228px] items-center gap-2 rounded-lg border bg-[#fafbfc] px-3 text-xs text-[#9397a4] md:flex"
+              className="hidden h-9 w-[228px] items-center gap-2 rounded-lg border bg-muted/50 px-3 text-xs text-muted-foreground md:flex"
             >
               <Search className="size-3.5" />
               <span className="flex-1 text-left">Search your workspace</span>
@@ -430,7 +431,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                     <span className="block text-xs font-medium">
                       {user.name}
                     </span>
-                    <span className="mt-0.5 block text-[10px] text-muted-foreground">
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
                       {seller
                         ? "Seller"
                         : admin
@@ -448,7 +449,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <span className="text-xs">{user.name}</span>
-                  <span className="mt-1 block text-[10px] font-normal text-muted-foreground">
+                  <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
                     +91 {user.phone}
                   </span>
                 </DropdownMenuLabel>
@@ -469,7 +470,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </div>
         </header>
-        <main className="app-content mx-auto max-w-[1550px] p-5 sm:p-8">
+        <main className="app-content mx-auto max-w-[1500px] px-5 py-7 sm:px-8 sm:py-8 lg:px-9">
           {user.subscription?.status === "EXPIRED" && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted p-4 text-xs">
               <p>

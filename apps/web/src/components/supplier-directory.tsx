@@ -30,9 +30,9 @@ export function SupplierDirectory({ query = "", category = "", city = "" }: { qu
       {error ? <ErrorState error={error} retry={() => void mutate()} /> : !data ? <Loading /> : !data.length ? <Empty title="No matching listed suppliers" description="Try another business name, category or market." /> : (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {data.map((supplier) => (
-            <article key={supplier.id} className="flex min-w-0 flex-col rounded-2xl border bg-card p-6">
+            <article key={supplier.id} className="supplier-card flex min-w-0 flex-col border bg-card p-6">
               <div className="flex items-start gap-3">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><Store className="size-5" /></div>
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-secondary text-primary"><Store className="size-5" /></div>
                 <div className="min-w-0"><h3 className="text-base font-semibold">{supplier.name}</h3><p className="mt-1 flex items-start gap-1 text-xs text-muted-foreground"><MapPin className="mt-0.5 size-3 shrink-0" />{supplier.marketArea}, {supplier.city}</p></div>
               </div>
               <p className="mt-4 text-sm leading-6 text-muted-foreground">{supplier.description}</p>

@@ -3,8 +3,11 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import { Providers } from "@/components/session";
 export const metadata = {
-  title: "Wholseler · Wholesale, in control",
-  description: "Catalog, stock and billing for wholesale businesses.",
+  title: { default: "BulkSaathi · Your wholesale business partner", template: "%s · BulkSaathi" },
+  applicationName: "BulkSaathi",
+  description: "Discover wholesale suppliers and products. Manage your business catalog, inventory, billing and team with BulkSaathi.",
+  icons: { icon: "/favicon.ico", apple: "/apple-touch-icon.png" },
+  manifest: "/manifest.webmanifest",
 };
 export default function RootLayout({
   children,

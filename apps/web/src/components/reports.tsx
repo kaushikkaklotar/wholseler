@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import { useState } from "react";
 import useSWR from "swr";
 import {
@@ -42,7 +43,7 @@ export function Reports() {
         description="Sales, stock and team activity from your recorded transactions."
         actions={
           <>
-            <select
+            <SearchSelect
               className="field !w-auto !text-xs"
               aria-label="Report period"
               value={period}
@@ -57,7 +58,7 @@ export function Reports() {
                   <option value={365}>Last 365 days</option>
                 </>
               )}
-            </select>
+            </SearchSelect>
             {period === "month" && (
               <input
                 aria-label="Report month"
@@ -140,7 +141,7 @@ export function Reports() {
                     render: (p) => (
                       <>
                         <p className="font-medium">{p.name}</p>
-                        <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                        <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                           {p.sku}
                         </p>
                       </>
@@ -216,7 +217,7 @@ export function Reports() {
                   ["Low stock alerts", data.lowStockCount],
                 ].map(([label, value]) => (
                   <div key={label}>
-                    <p className="text-[10px] text-muted-foreground">{label}</p>
+                    <p className="text-[11px] text-muted-foreground">{label}</p>
                     <p className="numeric mt-2 text-lg font-semibold">
                       {value}
                     </p>
@@ -247,7 +248,7 @@ export function Reports() {
               </div>
             </Panel>
           </div>
-          <p className="mt-4 text-[10px] leading-5 text-muted-foreground">
+          <p className="mt-4 text-[11px] leading-5 text-muted-foreground">
             Sales are attributed to invoice issue dates using current
             return/cancellation state. This operational report is not a filed
             GST return or an accounting integration.

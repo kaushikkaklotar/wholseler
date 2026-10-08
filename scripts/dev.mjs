@@ -126,4 +126,4 @@ if (production && process.env.WEB_STANDALONE === "true") {
     path.join(root, "apps/web"),
   );
 }
-console.log(`Wholseler: http://127.0.0.1:${process.env.WEB_PORT || 3000}`);
+console.log(`BulkSaathi: http://127.0.0.1:${process.env.WEB_PORT || 3000}`);

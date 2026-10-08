@@ -53,7 +53,7 @@ export function CatalogImport({
   const requestKey = useRef("");
   const uploaded = useRef(new Map<string, string>());
   function template() {
-    downloadCsv("wholseler-catalog-template.csv", [
+    downloadCsv("bulksaathi-catalog-template.csv", [
       headers,
       [
         "Cotton printed kurti",

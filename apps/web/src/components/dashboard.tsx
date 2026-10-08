@@ -43,15 +43,6 @@ export function Dashboard() {
       />
     );
   if (!data) return <Loading />;
-  const hour = Number(
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "numeric",
-      hour12: false,
-      timeZone: "Asia/Kolkata",
-    }).format(new Date()),
-  );
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const difference =
     data.yesterdaySalesPaise > 0
       ? ((data.todaySalesPaise - data.yesterdaySalesPaise) * 100) /
@@ -60,11 +51,11 @@ export function Dashboard() {
   return (
     <>
       <PageHeader
-        title={`${greeting}, ${user?.name.split(" ")[0]}.`}
+        title={data.ownOnly ? "Counter overview" : "Business overview"}
         description={
           data.ownOnly
             ? "Your counter's activity, stock alerts and next actions."
-            : "Here’s how your business is moving today."
+            : "Sales, stock and outstanding payments for today."
         }
         actions={
           <>
@@ -84,15 +75,15 @@ export function Dashboard() {
         }
       />
       {data.sampleWorkspace && (
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#e6e2fa] bg-[#f4f2ff] px-4 py-2.5 text-[11px] text-[#7d76ac]">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/20 bg-secondary px-4 py-2.5 text-xs text-muted-foreground">
           <span>
-            <strong className="font-medium text-[#655ba5]">
+            <strong className="font-medium text-primary">
               Sample workspace
             </strong>
-            <span className="mx-2 text-[#c0b9df]">·</span>Explore the workflow.
+            <span className="mx-2 text-primary/30">·</span>Explore the workflow.
             Changes are saved in your local workspace.
           </span>
-          <span className="flex items-center gap-1 text-[#837ab6]">
+          <span className="flex items-center gap-1 text-primary">
             Catalog → Stock → Billing
             <ArrowRight className="size-3" />
           </span>
@@ -120,7 +111,7 @@ export function Dashboard() {
             </Button>
           </div>
         )}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 min-[1100px]:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
           label="Today's sales"
           value={money(data.todaySalesPaise, true)}
@@ -166,20 +157,20 @@ export function Dashboard() {
                 true,
               )}
             </span>
-            <span className="ml-2 text-[11px] text-muted-foreground">
+            <span className="ml-2 text-xs text-muted-foreground">
               this week
             </span>
           </div>
           <SalesChart data={data.daily} />
           <div className="mt-3 flex items-center justify-between border-t px-5 py-3">
-            <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <span className="size-1.5 rounded-full bg-primary" />
               Net invoice sales
             </span>
             {can("REPORTS:VIEW") && (
               <Link
                 href="/dashboard/reports"
-                className="flex items-center gap-1 text-[11px] font-medium text-primary"
+                className="flex items-center gap-1 text-xs font-medium text-primary"
               >
                 View reports
                 <ArrowRight className="size-3" />
@@ -198,13 +189,13 @@ export function Dashboard() {
                 <div key={i.id} className="flex gap-3 border-t py-4">
                   <Initials name={i.seller.businessName} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-medium">
+                    <p className="truncate text-[13px] font-medium">
                       {i.seller.businessName}
                     </p>
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
                       {i.product.name} · {i.quantity} units
                     </p>
-                    <p className="mt-1.5 text-[10px] text-[#a2a6b2]">
+                    <p className="mt-1.5 text-[11px] text-muted-foreground">
                       {date(i.createdAt)} · {time(i.createdAt)}
                     </p>
                   </div>
@@ -222,7 +213,7 @@ export function Dashboard() {
             <div className="border-t px-5 py-3">
               <Link
                 href="/dashboard/buyers"
-                className="flex items-center justify-between text-[11px] font-medium text-primary"
+                className="flex items-center justify-between text-xs font-medium text-primary"
               >
                 Manage buyer inquiries
                 <ArrowRight className="size-3" />
@@ -261,7 +252,7 @@ export function Dashboard() {
                       href={`/dashboard/billing/${i.id}`}
                     >
                       {i.number}
-                      <span className="mt-1 block text-[10px] font-normal text-muted-foreground">
+                      <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
                         {date(i.createdAt)} · {time(i.createdAt)}
                       </span>
                     </Link>
@@ -275,7 +266,7 @@ export function Dashboard() {
                 render: (i) => (
                   <>
                     <span className="font-medium">{i.buyerName}</span>
-                    <span className="mt-1 block text-[10px] text-muted-foreground">
+                    <span className="mt-1 block text-[11px] text-muted-foreground">
                       {i.actor.name}
                     </span>
                   </>
@@ -322,10 +313,10 @@ export function Dashboard() {
                     name={v.product.name}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-medium">
+                    <p className="truncate text-xs font-medium">
                       {v.product.name}
                     </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {v.size} · {v.color}
                     </p>
                   </div>
@@ -352,7 +343,7 @@ export function Dashboard() {
             <div className="border-t px-5 py-3">
               <Link
                 href="/dashboard/inventory?low=true"
-                className="flex items-center justify-between text-[11px] font-medium text-primary"
+                className="flex items-center justify-between text-xs font-medium text-primary"
               >
                 Review inventory
                 <ArrowRight className="size-3" />
@@ -361,7 +352,7 @@ export function Dashboard() {
           )}
         </Panel>
       </div>
-      <div className="mt-6 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+      <div className="mt-6 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
         <Package className="size-3.5" />
         Catalog, stock and billing stay connected.
         <span className="ml-auto">All times shown in India Standard Time.</span>

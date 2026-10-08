@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -111,18 +112,18 @@ export function Discover({ saved = false }: { saved?: boolean }) {
         }
       />
       {!saved && (
-        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-[#e6e3fb] bg-[#f1effb] px-5 py-4">
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-secondary px-5 py-4">
           <Store className="size-5 text-primary" />
           <div>
-            <p className="text-xs font-medium text-[#625a9c]">
+            <p className="text-xs font-medium text-primary">
               Source from verified wholesale businesses
             </p>
-            <p className="mt-1 text-[11px] text-[#9790b5]">
+            <p className="mt-1 text-xs text-muted-foreground">
               Stock and prices come from supplier catalogs. Discuss dispatch and
               payment terms directly.
             </p>
           </div>
-          <span className="ml-auto text-[11px] text-[#7a719f]">
+          <span className="ml-auto text-xs text-muted-foreground">
             {data?.supplierCount ?? "…"} verified suppliers
           </span>
         </div>
@@ -142,7 +143,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
               placeholder="Search products, suppliers or SKUs…"
             />
           </div>
-          <select
+          <SearchSelect
             aria-label="Category"
             className="field !w-auto !text-xs"
             value={category}
@@ -155,7 +156,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
             {categoryNames.map((c) => (
               <option key={c}>{c}</option>
             ))}
-          </select>
+          </SearchSelect>
           <Button
             variant={filters ? "secondary" : "outline"}
             onClick={() => setFilters((v) => !v)}
@@ -163,7 +164,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
             <SlidersHorizontal />
             Filters
           </Button>
-          <select
+          <SearchSelect
             aria-label="Sort products"
             className="field !w-auto !text-xs"
             value={sort}
@@ -175,7 +176,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
             <option value="new">New arrivals</option>
             <option value="trending">Trending</option>
             <option value="price">Price: low to high</option>
-          </select>
+          </SearchSelect>
         </div>
         {filters && (
           <div className="grid gap-3 border-t p-4 sm:grid-cols-4">
@@ -224,12 +225,12 @@ export function Discover({ saved = false }: { saved?: boolean }) {
           </div>
         )}
         <div className="flex items-center justify-between gap-3 border-t px-4 py-3">
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {data
               ? `${data.total} products match your sourcing needs`
               : "Loading products…"}
           </p>
-          <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
             <Checkbox
               checked={inStock}
               onCheckedChange={(v) => {
@@ -255,7 +256,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {data.products.map((p) => (
               <article key={p.id} className="panel overflow-hidden">
-                <div className="relative aspect-[5/4] bg-[#f3f0eb]">
+                <div className="relative aspect-[5/4] bg-muted">
                   <Link
                     href={`/seller/products/${p.id}`}
                     className="absolute inset-0"
@@ -293,7 +294,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
                   </button>
                 </div>
                 <div className="p-4">
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     {p.category} · {p.variants.length} variants
                   </p>
                   <Link
@@ -315,16 +316,16 @@ export function Discover({ saved = false }: { saved?: boolean }) {
                         </span>
                       )}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[11px] text-muted-foreground">
                       MOQ {p.moq}
                     </span>
                   </div>
                   <div className="mt-4 flex items-center gap-2 border-t pt-3">
-                    <span className="flex size-7 items-center justify-center rounded-md bg-violet-50 text-primary">
+                    <span className="flex size-7 items-center justify-center rounded-md bg-secondary text-primary">
                       <Store className="size-3.5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1 truncate text-[11px] font-medium">
+                      <p className="flex items-center gap-1 truncate text-xs font-medium">
                         {p.business.name}
                         <ShieldCheck className="size-3 text-emerald-600" />
                       </p>
@@ -344,7 +345,7 @@ export function Discover({ saved = false }: { saved?: boolean }) {
               </article>
             ))}
           </div>
-          <div className="mt-5 flex justify-between gap-3 text-[11px] text-muted-foreground">
+          <div className="mt-5 flex justify-between gap-3 text-xs text-muted-foreground">
             <span>
               Page {page} of {Math.max(1, Math.ceil(data.total / 24))} · Stock
               refreshes while you browse
@@ -427,7 +428,7 @@ export function SellerProductDetail({ id }: { id: string }) {
     <>
       <Link
         href="/seller"
-        className="mb-5 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary"
+        className="mb-5 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-3" />
         Back to discovery
@@ -451,7 +452,7 @@ export function SellerProductDetail({ id }: { id: string }) {
       />
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
         <Panel className="overflow-hidden">
-          <div className="relative aspect-square bg-[#f3f0eb]">
+          <div className="relative aspect-square bg-muted">
             {product.images[imageIndex] ? (
               <Image
                 src={product.images[imageIndex].url}
@@ -561,7 +562,7 @@ export function SellerProductDetail({ id }: { id: string }) {
                   Call supplier
                 </Button>
               </div>
-              <p className="text-[10px] leading-5 text-muted-foreground">
+              <p className="text-[11px] leading-5 text-muted-foreground">
                 Confirm availability, commercial terms and dispatch with the
                 supplier. Contacting them records a sourcing inquiry.
               </p>
@@ -583,7 +584,7 @@ export function SellerProductDetail({ id }: { id: string }) {
                   <p className="text-sm font-semibold">
                     {product.business.name}
                   </p>
-                  <p className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin className="size-3" />
                     {product.business.marketArea}, {product.business.city}
                   </p>
@@ -592,10 +593,10 @@ export function SellerProductDetail({ id }: { id: string }) {
               <p className="text-xs leading-6 text-muted-foreground">
                 {product.business.description}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {product.business.address}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {product.business.deliveryInfo}
               </p>
             </div>
@@ -822,7 +823,7 @@ export function Suppliers() {
                   <Initials name={b.name} />
                   <div>
                     <h2 className="text-sm font-semibold">{b.name}</h2>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {b.marketArea}, {b.city}
                     </p>
                   </div>
@@ -851,7 +852,7 @@ export function Suppliers() {
                   ))}
                 </div>
                 <div className="flex items-center justify-between border-t pt-4">
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {b._count?.products || 0} published products
                   </span>
                   <Button asChild size="sm" variant="outline">
@@ -903,7 +904,7 @@ export function SellerInquiries() {
                     className="font-medium hover:text-primary"
                   >
                     {i.product.name}
-                    <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
+                    <span className="mt-1 block font-mono text-[11px] text-muted-foreground">
                       {i.product.sku}
                     </span>
                   </Link>
@@ -915,7 +916,7 @@ export function SellerInquiries() {
                 render: (i) => (
                   <>
                     <p>{i.business?.name}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {i.business?.marketArea}
                     </p>
                   </>
@@ -944,7 +945,7 @@ export function SellerInquiries() {
                 key: "note",
                 label: "Your note",
                 render: (i) => (
-                  <p className="max-w-52 text-[11px] text-muted-foreground">
+                  <p className="max-w-52 text-xs text-muted-foreground">
                     {i.note || "—"}
                   </p>
                 ),

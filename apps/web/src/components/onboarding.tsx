@@ -163,7 +163,7 @@ export function Onboarding() {
   return (
     <div className="entry-page min-h-screen">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 lg:px-10">
-        <Link href="/" aria-label="Wholseler home">
+        <Link href="/" aria-label="BulkSaathi home">
           <Brand />
         </Link>
         <Button

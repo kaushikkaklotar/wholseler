@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { cloneElement, isValidElement, useId, useState } from "react";
+import { SearchSelect } from "@/components/ui/search-select";
 import {
   ArrowDown,
   ArrowUp,
@@ -46,7 +47,7 @@ export function PageHeader({
   eyebrow?: string;
 }) {
   return (
-    <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
+    <div className="page-header mb-7 flex flex-wrap items-start justify-between gap-4">
       <div>
         {eyebrow && (
           <p className="mb-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
@@ -55,13 +56,13 @@ export function PageHeader({
         )}
         <h1 className="page-title">{title}</h1>
         {description && (
-          <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          <p className="page-description mt-2 text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         )}
       </div>
       {actions && (
-        <div className="flex flex-wrap items-center gap-2">{actions}</div>
+        <div className="page-header-actions flex flex-wrap items-center gap-2">{actions}</div>
       )}
     </div>
   );
@@ -82,7 +83,7 @@ export function Panel({
   return (
     <section className={cn("panel", className)}>
       {title && (
-        <div className="flex items-center justify-between gap-3 px-5 py-4">
+        <div className="panel-heading flex flex-wrap items-center justify-between gap-3 px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold">{title}</h2>
             {description && (
@@ -110,12 +111,12 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-[11px] font-medium",
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium",
         {
           success: "bg-emerald-50 text-emerald-700",
           warning: "bg-amber-50 text-amber-700",
           danger: "bg-rose-50 text-rose-700",
-          primary: "bg-violet-50 text-violet-700",
+          primary: "bg-secondary text-primary",
           neutral: "bg-slate-100 text-slate-600",
         }[tone],
       )}
@@ -171,19 +172,19 @@ export function Metric({
   change?: number;
 }) {
   return (
-    <div className="panel p-5">
+    <div className="panel metric-card">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-[13px] font-medium text-muted-foreground">
           {label}
         </span>
-        <span className="flex size-8 items-center justify-center rounded-lg bg-[#f5f4fc] text-[#837bd6] [&_svg]:size-4">
+        <span className="metric-icon flex size-6 items-center justify-center [&_svg]:size-[18px]">
           {icon}
         </span>
       </div>
-      <div className="numeric mt-3 text-[27px] font-semibold tracking-tight">
+      <div className="metric-value numeric mt-4 text-[30px] font-semibold tracking-tight">
         {value}
       </div>
-      <div className="mt-2 flex min-h-4 items-center gap-1.5 text-[11px] text-muted-foreground">
+      <div className="mt-2 flex min-h-4 items-center gap-1.5 text-xs text-muted-foreground">
         {change !== undefined && (
           <span
             className={cn(
@@ -216,7 +217,7 @@ export function Thumb({
   return (
     <div
       style={{ width: size, height: size }}
-      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-black/3 bg-[#f3f0eb]"
+      className="relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-black/3 bg-muted"
     >
       {src ? (
         <Image
@@ -243,7 +244,7 @@ export function Initials({
   return (
     <span
       className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-xs font-medium text-violet-600",
+        "flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-medium text-primary",
         className,
       )}
     >
@@ -359,15 +360,30 @@ export function Field({
   hint?: string;
   required?: boolean;
 }) {
+  const generatedId = useId();
+  const select = isValidElement<{ id?: string; "aria-labelledby"?: string }>(children) && children.type === SearchSelect ? children : null;
+  const inputId = select?.props.id ?? `${generatedId}-input`;
+  if (select) {
+    return (
+      <div className="block min-w-0 space-y-2">
+        <label htmlFor={inputId} id={`${generatedId}-label`} className="form-label">
+          {label}
+          {required && <span className="ml-0.5 text-primary">*</span>}
+        </label>
+        {cloneElement(select, { id: inputId, "aria-labelledby": `${generatedId}-label` })}
+        {hint && <span className="block text-xs leading-4 text-muted-foreground">{hint}</span>}
+      </div>
+    );
+  }
   return (
-    <label className="block space-y-1.5">
-      <span className="form-label">
+    <label className="block min-w-0 space-y-2">
+      <span id={`${generatedId}-label`} className="form-label">
         {label}
         {required && <span className="ml-0.5 text-primary">*</span>}
       </span>
       {children}
       {hint && (
-        <span className="block text-[11px] leading-4 text-muted-foreground">
+        <span className="block text-xs leading-4 text-muted-foreground">
           {hint}
         </span>
       )}
@@ -431,7 +447,7 @@ export function DataTable<T>({
       {shown.length ? (
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#fafbfc] hover:bg-[#fafbfc]">
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
               {columns.map((c) => (
                 <TableHead
                   key={c.key}
@@ -444,11 +460,11 @@ export function DataTable<T>({
           </TableHeader>
           <TableBody>
             {shown.map((row) => (
-              <TableRow key={rowKey(row)} className="hover:bg-[#fafaff]">
+              <TableRow key={rowKey(row)} className="hover:bg-accent/30">
                 {columns.map((c) => (
                   <TableCell
                     key={c.key}
-                    className={cn("px-5 py-3.5 text-[12px]", c.className)}
+                    className={cn("px-5 py-4 text-[13px]", c.className)}
                   >
                     {c.render(row)}
                   </TableCell>
@@ -482,7 +498,7 @@ export function Pagination({
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 text-[11px] text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t px-5 py-3 text-xs text-muted-foreground">
       <span>
         {total
           ? `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} of ${total}`

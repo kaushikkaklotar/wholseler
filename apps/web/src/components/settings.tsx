@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
@@ -52,7 +53,7 @@ function CategoryChoices({
       {categories.map((c) => (
         <label
           key={c}
-          className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-[11px] ${value.includes(c) ? "border-violet-200 bg-violet-50 text-primary" : "bg-white text-muted-foreground"}`}
+          className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-xs ${value.includes(c) ? "border-primary/20 bg-secondary text-primary" : "bg-white text-muted-foreground"}`}
         >
           <Checkbox
             checked={value.includes(c)}
@@ -142,7 +143,7 @@ function BusinessFields({
           />
         </Field>
         <Field label="Preferred buyer contact">
-          <select
+          <SearchSelect
             className="field"
             disabled={disabled}
             value={draft.contactPreference || "BOTH"}
@@ -151,7 +152,7 @@ function BusinessFields({
             <option value="BOTH">Call & WhatsApp</option>
             <option value="CALL">Call only</option>
             <option value="WHATSAPP">WhatsApp only</option>
-          </select>
+          </SearchSelect>
         </Field>
         <Field label="Minimum order quantity">
           <Input
@@ -364,7 +365,7 @@ function SettingsForm({
             {data.uploads.map((f) => (
               <a
                 key={f.id}
-                className="flex items-center gap-2 text-[11px] text-primary"
+                className="flex items-center gap-2 text-xs text-primary"
                 href={`/api/v1/media/${f.id}`}
                 download
               >
@@ -393,7 +394,7 @@ function SettingsForm({
                 />
               </label>
             )}
-            <p className="text-[10px] leading-5 text-muted-foreground">
+            <p className="text-[11px] leading-5 text-muted-foreground">
               Documents are private to your business and the platform
               verification team. Up to 8 MB per file.
             </p>

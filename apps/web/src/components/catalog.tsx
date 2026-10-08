@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -229,7 +230,7 @@ export function Catalog() {
         <>
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <Pill tone="primary">{data.allCount} active products</Pill>
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               {data.allCount.toLocaleString()} / {data.limit.toLocaleString()}{" "}
               plan limit
             </span>
@@ -257,7 +258,7 @@ export function Catalog() {
                   }}
                 />
               </div>
-              <select
+              <SearchSelect
                 aria-label="Product category"
                 className="field !min-h-9 !w-auto !py-1.5 !text-xs"
                 value={category}
@@ -270,7 +271,7 @@ export function Catalog() {
                 {categories.map((c) => (
                   <option key={c}>{c}</option>
                 ))}
-              </select>
+              </SearchSelect>
               <div className="ml-auto flex gap-1 rounded-lg bg-muted p-1">
                 <Button
                   variant={view === "list" ? "outline" : "ghost"}
@@ -310,7 +311,7 @@ export function Catalog() {
                           <span className="block font-medium hover:text-primary">
                             {p.name}
                           </span>
-                          <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
+                          <span className="mt-1 block font-mono text-[11px] text-muted-foreground">
                             {p.sku}
                           </span>
                         </button>
@@ -334,7 +335,7 @@ export function Catalog() {
                         <span className="numeric font-medium">
                           {money(p.pricePaise, true)}
                         </span>
-                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
                           {p.visibility === "PUBLIC"
                             ? "Public price"
                             : p.visibility === "INQUIRY"
@@ -354,7 +355,7 @@ export function Catalog() {
                         >
                           {p.stock} units
                         </span>
-                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
                           {p.variants.length} variants · MOQ {p.moq}
                         </span>
                       </>
@@ -383,7 +384,7 @@ export function Catalog() {
                       className="block w-full text-left"
                       onClick={() => setDetails(p)}
                     >
-                      <div className="flex aspect-[5/4] items-center justify-center bg-[#f3f0eb]">
+                      <div className="flex aspect-[5/4] items-center justify-center bg-muted">
                         <Thumb
                           src={p.images[0]?.url}
                           name={p.name}
@@ -391,17 +392,17 @@ export function Catalog() {
                         />
                       </div>
                       <div className="p-4 pb-0">
-                        <p className="truncate text-[12px] font-medium">
+                        <p className="truncate text-[13px] font-medium">
                           {p.name}
                         </p>
-                        <p className="mt-1 font-mono text-[10px] text-muted-foreground">
+                        <p className="mt-1 font-mono text-[11px] text-muted-foreground">
                           {p.sku}
                         </p>
                         <div className="mt-3 flex items-center justify-between">
                           <span className="numeric text-sm font-semibold">
                             {money(p.pricePaise, true)}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {p.stock} units
                           </span>
                         </div>
@@ -432,7 +433,7 @@ export function Catalog() {
               />
             )}
           </Panel>
-          <p className="mt-3 text-[10px] text-muted-foreground">
+          <p className="mt-3 text-[11px] text-muted-foreground">
             Catalog changes enter platform review before seller discovery.
             Internal billing can use active products immediately.
           </p>
@@ -692,7 +693,7 @@ export function ProductEditor({
                 />
               </Field>
               <Field label="Category" required>
-                <select
+                <SearchSelect
                   className="field"
                   value={draft.category}
                   onChange={(e) => update("category", e.target.value)}
@@ -700,7 +701,7 @@ export function ProductEditor({
                   {[...new Set([...categories, draft.category])].map((c) => (
                     <option key={c}>{c}</option>
                   ))}
-                </select>
+                </SearchSelect>
               </Field>
               <Field label="Minimum order quantity" required>
                 <Input
@@ -721,7 +722,7 @@ export function ProductEditor({
                 />
               </Field>
               <Field label="Price visibility">
-                <select
+                <SearchSelect
                   className="field"
                   value={draft.visibility}
                   onChange={(e) =>
@@ -733,7 +734,7 @@ export function ProductEditor({
                     Approved sellers only
                   </option>
                   <option value="INQUIRY">Price on inquiry</option>
-                </select>
+                </SearchSelect>
               </Field>
               <Field
                 label="Carton price (₹)"
@@ -761,7 +762,7 @@ export function ProductEditor({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold">Product images</h3>
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[11px] text-muted-foreground">
                   {draft.images.length}/8 · JPEG, PNG, WebP · Up to 8 MB
                 </span>
               </div>
@@ -789,7 +790,7 @@ export function ProductEditor({
                   </div>
                 ))}
                 {draft.images.length < 8 && (
-                  <label className="flex size-[88px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 text-[10px] text-muted-foreground">
+                  <label className="flex size-[88px] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 text-[11px] text-muted-foreground">
                     <ImagePlus className="mb-1 size-5" />
                     {uploading ? "Uploading…" : "Add images"}
                     <input
@@ -843,7 +844,7 @@ export function ProductEditor({
                 </Button>
               </div>
               <div className="overflow-x-auto rounded-lg border">
-                <div className="grid min-w-[580px] grid-cols-[1fr_1fr_100px_100px_36px] gap-2 bg-muted/40 px-3 py-2 text-[10px] text-muted-foreground">
+                <div className="grid min-w-[580px] grid-cols-[1fr_1fr_100px_100px_36px] gap-2 bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
                   <span>SIZE</span>
                   <span>COLOUR</span>
                   <span>{product ? "CURRENT STOCK" : "OPENING STOCK"}</span>
@@ -921,7 +922,7 @@ export function ProductEditor({
                 ))}
               </div>
               {product && (
-                <p className="mt-2 text-[10px] text-muted-foreground">
+                <p className="mt-2 text-[11px] text-muted-foreground">
                   New variants start with zero stock. Variants with remaining
                   stock cannot be removed.
                 </p>

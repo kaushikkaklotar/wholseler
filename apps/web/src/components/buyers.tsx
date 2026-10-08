@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
@@ -143,7 +144,7 @@ export function Buyers() {
                           <span className="block font-medium">
                             {i.seller.businessName}
                           </span>
-                          <span className="mt-1 block text-[10px] text-muted-foreground">
+                          <span className="mt-1 block text-[11px] text-muted-foreground">
                             {i.seller.city} · {i.seller.user.phone}
                           </span>
                         </span>
@@ -156,7 +157,7 @@ export function Buyers() {
                     render: (i) => (
                       <>
                         <p className="font-medium">{i.product.name}</p>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
+                        <p className="mt-1 text-[11px] text-muted-foreground">
                           {i.quantity} units · {i.channel.toLowerCase()} ·{" "}
                           {date(i.createdAt)}
                         </p>
@@ -228,7 +229,7 @@ export function Buyers() {
                     render: (b) => (
                       <>
                         <p className="font-medium">{b.name}</p>
-                        <p className="mt-1 text-[10px] text-muted-foreground">
+                        <p className="mt-1 text-[11px] text-muted-foreground">
                           +91 {b.phone}
                         </p>
                       </>
@@ -405,7 +406,7 @@ function InquiryDialog({
         </DialogHeader>
         <div className="rounded-lg bg-muted/50 p-4">
           <p className="text-xs font-semibold">{inquiry.product.name}</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             {inquiry.product.sku} · {inquiry.quantity} units ·{" "}
             {inquiry.channel.toLowerCase()}
           </p>
@@ -415,7 +416,7 @@ function InquiryDialog({
         </div>
         <form onSubmit={save} className="space-y-4">
           <Field label="Inquiry stage">
-            <select
+            <SearchSelect
               disabled={!editable}
               className="field"
               value={status}
@@ -426,7 +427,7 @@ function InquiryDialog({
                   {s.toLowerCase()}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Team note">
             <Textarea

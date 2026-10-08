@@ -1,6 +1,8 @@
-# Wholseler
+# BulkSaathi
 
 A document aligned B2B wholesale operating system for textile and apparel markets. It connects catalog, live inventory, counter billing, seller sourcing and platform operations in one multi tenant application.
+
+Brand assets, UI conventions, searchable selects and refresh verification are documented in [docs/ui-refresh.md](docs/ui-refresh.md).
 
 ## Phase 1 implementation
 

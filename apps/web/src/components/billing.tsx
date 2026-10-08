@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -135,7 +136,7 @@ export function Billing() {
                   placeholder="Invoice number, buyer or mobile"
                 />
               </div>
-              <select
+              <SearchSelect
                 aria-label="Payment status"
                 value={status}
                 onChange={(e) => {
@@ -149,7 +150,7 @@ export function Billing() {
                 <option value="PARTIAL">Partially paid</option>
                 <option value="UNPAID">Unpaid</option>
                 <option value="CANCELLED">Cancelled</option>
-              </select>
+              </SearchSelect>
             </div>
             <DataTable<Invoice>
               rows={invoices}
@@ -166,7 +167,7 @@ export function Billing() {
                       className="font-medium hover:text-primary"
                     >
                       {i.number}
-                      <span className="mt-1 block text-[10px] font-normal text-muted-foreground">
+                      <span className="mt-1 block text-[11px] font-normal text-muted-foreground">
                         {date(i.createdAt)} · {time(i.createdAt)}
                       </span>
                     </Link>
@@ -178,7 +179,7 @@ export function Billing() {
                   render: (i) => (
                     <>
                       <span className="font-medium">{i.buyerName}</span>
-                      <span className="mt-1 block text-[10px] text-muted-foreground">
+                      <span className="mt-1 block text-[11px] text-muted-foreground">
                         +91 {i.buyerPhone}
                       </span>
                     </>
@@ -410,7 +411,7 @@ export function NewBill() {
     <>
       <Link
         href="/dashboard/billing"
-        className="mb-5 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary"
+        className="mb-5 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-3" />
         Back to invoices
@@ -500,7 +501,7 @@ export function NewBill() {
                           key={v.id}
                           onClick={() => add(v)}
                           disabled={!!line?.reservationId || added >= v.stock}
-                          className="flex items-center gap-3 bg-white px-4 py-3 text-left hover:bg-violet-50/40 disabled:opacity-40"
+                          className="flex items-center gap-3 bg-white px-4 py-3 text-left hover:bg-secondary/40 disabled:opacity-40"
                         >
                           <Thumb
                             src={
@@ -511,13 +512,13 @@ export function NewBill() {
                             name={v.product.name}
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] font-medium">
+                            <p className="truncate text-xs font-medium">
                               {v.product.name}
                             </p>
-                            <p className="mt-1 text-[10px] text-muted-foreground">
+                            <p className="mt-1 text-[11px] text-muted-foreground">
                               {v.size} · {v.color} · {v.stock - added} available
                             </p>
-                            <p className="numeric mt-1 text-[11px] font-medium text-primary">
+                            <p className="numeric mt-1 text-xs font-medium text-primary">
                               {money(v.product.pricePaise, true)}
                             </p>
                           </div>
@@ -558,10 +559,10 @@ export function NewBill() {
                       {cart.map((l) => (
                         <tr key={l.variant.id} className="border-t">
                           <td className="px-5 py-4">
-                            <p className="text-[11px] font-medium">
+                            <p className="text-xs font-medium">
                               {l.variant.product.name}
                             </p>
-                            <p className="mt-1 text-[10px] text-muted-foreground">
+                            <p className="mt-1 text-[11px] text-muted-foreground">
                               {l.variant.size} · {l.variant.color}
                               {l.reservationId && (
                                 <span className="ml-2 text-primary">
@@ -714,7 +715,7 @@ export function NewBill() {
                 </Field>
                 <button
                   type="button"
-                  className="text-left text-[11px] font-medium text-primary"
+                  className="text-left text-xs font-medium text-primary"
                   onClick={() => setBuyerDetails((v) => !v)}
                 >
                   {buyerDetails ? "Hide" : "Add"} GSTIN & address details
@@ -750,7 +751,7 @@ export function NewBill() {
                   />
                 </Field>
                 <Field label="Tax mode">
-                  <select
+                  <SearchSelect
                     value={taxMode}
                     disabled={!user?.hasGst}
                     onChange={(e) => setTaxMode(e.target.value)}
@@ -759,7 +760,7 @@ export function NewBill() {
                     <option value="NONE">Non-GST</option>
                     <option value="CGST_SGST">CGST + SGST</option>
                     <option value="IGST">IGST</option>
-                  </select>
+                  </SearchSelect>
                 </Field>
               </div>
               {taxMode !== "NONE" && (
@@ -779,7 +780,7 @@ export function NewBill() {
                 </Field>
               )}
               {!user?.hasGst && (
-                <p className="text-[10px] leading-4 text-muted-foreground">
+                <p className="text-[11px] leading-4 text-muted-foreground">
                   GST invoices become available after your business GSTIN is
                   added in settings.
                 </p>
@@ -807,7 +808,7 @@ export function NewBill() {
                 </div>
               </div>
               <Field label="Payment mode">
-                <select
+                <SearchSelect
                   className="field"
                   value={paymentMode}
                   onChange={(e) => {
@@ -819,7 +820,7 @@ export function NewBill() {
                   <option value="CASH">Cash</option>
                   <option value="BANK">Bank transfer</option>
                   <option value="CREDIT">Unpaid / credit</option>
-                </select>
+                </SearchSelect>
               </Field>
               {paymentMode !== "CREDIT" && (
                 <>
@@ -859,7 +860,7 @@ export function NewBill() {
                 <Check />
                 Issue invoice
               </BusyButton>
-              <p className="text-center text-[10px] leading-4 text-muted-foreground">
+              <p className="text-center text-[11px] leading-4 text-muted-foreground">
                 Invoice and stock movement save together.
                 <br />
                 Payments are recorded manually.
@@ -908,7 +909,7 @@ export function InvoiceDetail({ id }: { id: string }) {
       <div className="no-print">
         <Link
           href="/dashboard/billing"
-          className="mb-5 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary"
+          className="mb-5 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="size-3" />
           Back to invoices
@@ -962,7 +963,7 @@ export function InvoiceDetail({ id }: { id: string }) {
                 {invoice.businessSnapshot.phone}
               </p>
               {invoice.businessSnapshot.gstNumber && (
-                <p className="mt-1 text-[10px] text-muted-foreground">
+                <p className="mt-1 text-[11px] text-muted-foreground">
                   GSTIN: {invoice.businessSnapshot.gstNumber}
                 </p>
               )}
@@ -974,13 +975,13 @@ export function InvoiceDetail({ id }: { id: string }) {
               <p className="mt-2 font-mono text-sm font-semibold">
                 {invoice.number}
               </p>
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {date(invoice.createdAt, { year: "numeric" })}
               </p>
             </div>
           </div>
           <div className="my-7 border-y py-5">
-            <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="mb-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               Billed to
             </p>
             <p className="text-sm font-semibold">{invoice.buyerName}</p>
@@ -993,7 +994,7 @@ export function InvoiceDetail({ id }: { id: string }) {
               </p>
             )}
             {invoice.buyerGst && (
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground">
                 GSTIN: {invoice.buyerGst}
               </p>
             )}
@@ -1013,11 +1014,11 @@ export function InvoiceDetail({ id }: { id: string }) {
                   <tr key={item.id}>
                     <td>
                       <p className="font-medium">{item.productName}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
+                      <p className="mt-1 text-[11px] text-muted-foreground">
                         {item.sku} · {item.size} · {item.color}
                       </p>
                       {item.returnedQuantity > 0 && (
-                        <p className="mt-1 text-[10px] text-amber-600">
+                        <p className="mt-1 text-[11px] text-amber-600">
                           {item.returnedQuantity} units returned
                         </p>
                       )}
@@ -1094,7 +1095,7 @@ export function InvoiceDetail({ id }: { id: string }) {
           </div>
           {invoice.note && (
             <div className="mt-7 border-t pt-4">
-              <p className="text-[10px] font-medium text-muted-foreground">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 Invoice note
               </p>
               <p className="mt-1 text-xs">{invoice.note}</p>
@@ -1105,10 +1106,11 @@ export function InvoiceDetail({ id }: { id: string }) {
               Cancelled: {invoice.cancellationReason}
             </div>
           )}
-          <p className="mt-8 border-t pt-4 text-[10px] text-muted-foreground">
+          <p className="mt-8 border-t pt-4 text-[11px] text-muted-foreground">
             Thank you for your business. · Payment mode:{" "}
             {invoice.paymentMode.toLowerCase()}
           </p>
+          <p className="mt-2 text-[11px] text-muted-foreground">Prepared with BulkSaathi</p>
         </section>
         <div className="no-print space-y-5">
           <Panel
@@ -1124,10 +1126,10 @@ export function InvoiceDetail({ id }: { id: string }) {
                   >
                     <div>
                       <p className="text-xs font-medium">{p.mode}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">
+                      <p className="mt-1 text-[11px] text-muted-foreground">
                         {date(p.createdAt)} · {time(p.createdAt)}
                       </p>
-                      <p className="mt-1 max-w-48 text-[10px] text-muted-foreground">
+                      <p className="mt-1 max-w-48 text-[11px] text-muted-foreground">
                         {p.note}
                       </p>
                     </div>
@@ -1169,7 +1171,7 @@ export function InvoiceDetail({ id }: { id: string }) {
                         {money(r.amountPaise)}
                       </span>
                     </div>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    <p className="mt-1.5 text-xs text-muted-foreground">
                       {r.reason}
                     </p>
                   </div>
@@ -1200,7 +1202,7 @@ export function InvoiceDetail({ id }: { id: string }) {
                   Cancel invoice
                 </Button>
               )}
-              <p className="text-[10px] leading-5 text-muted-foreground">
+              <p className="text-[11px] leading-5 text-muted-foreground">
                 Returns and cancellations restore eligible units. Payment
                 entries are retained for settlement.
               </p>
@@ -1300,7 +1302,7 @@ function PaymentDialog({
             />
           </Field>
           <Field label="Payment mode">
-            <select
+            <SearchSelect
               className="field"
               value={mode}
               onChange={(e) => setMode(e.target.value)}
@@ -1308,7 +1310,7 @@ function PaymentDialog({
               <option value="UPI">UPI</option>
               <option value="CASH">Cash</option>
               <option value="BANK">Bank transfer</option>
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Reference / note">
             <Input
@@ -1406,7 +1408,7 @@ function ReturnDialog({
                 >
                   <div className="flex-1">
                     <p className="text-xs font-medium">{i.productName}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {i.size} · {i.color} · {i.quantity - i.returnedQuantity}{" "}
                       eligible units
                     </p>

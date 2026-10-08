@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import useSWR from "swr";
@@ -150,7 +151,7 @@ export function StockImport({
           variant="outline"
           size="sm"
           onClick={() =>
-            downloadCsv("wholseler-stock-template.csv", [
+            downloadCsv("bulksaathi-stock-template.csv", [
               ["sku", "size", "color", "quantity"],
               ["KT-106", "M", "Sage", 25],
             ])
@@ -177,7 +178,7 @@ export function StockImport({
         </label>
         <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
           <Field label="Movement">
-            <select
+            <SearchSelect
               className="field"
               value={type}
               onChange={(e) => {
@@ -188,7 +189,7 @@ export function StockImport({
               <option value="PURCHASE">Purchase / stock in (+)</option>
               <option value="STOCK_OUT">Stock out (−)</option>
               <option value="ADJUSTMENT">Adjustment (+ or −)</option>
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Reason / purchase reference" required>
             <Input
@@ -383,7 +384,7 @@ export function ReserveStock({
               />
             </Field>
             <Field label="Hold duration">
-              <select
+              <SearchSelect
                 className="field"
                 value={hours}
                 onChange={(e) => {
@@ -396,7 +397,7 @@ export function ReserveStock({
                     {n} hours
                   </option>
                 ))}
-              </select>
+              </SearchSelect>
             </Field>
           </fieldset>
           <Field label="Reason" required>

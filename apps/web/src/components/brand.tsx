@@ -1,16 +1,21 @@
-import { Boxes } from "lucide-react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
-export function Brand({ dark = false }: { dark?: boolean }) {
+export function Brand({ dark = false, compact = false, className }: {
+  dark?: boolean;
+  compact?: boolean;
+  className?: string;
+}) {
   return (
-    <div
-      className={`flex items-center gap-2.5 ${dark ? "text-white" : "text-foreground"}`}
-    >
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-white">
-        <Boxes className="size-5" />
-      </span>
-      <span className="text-xl font-semibold tracking-tight">
-        wholseler<span className="text-primary">.</span>
-      </span>
-    </div>
+    <span className={cn("brand-lockup inline-flex shrink-0 items-center", dark && "brand-on-dark", className)}>
+      <Image
+        src={compact ? "/brand/bulksaathi-mark.png" : "/brand/bulksaathi-logo.png"}
+        alt="BulkSaathi"
+        width={compact ? 64 : 560}
+        height={compact ? 64 : 128}
+        priority
+        className={compact ? "size-9 object-contain" : "h-auto w-[180px] sm:w-[198px]"}
+      />
+    </span>
   );
 }

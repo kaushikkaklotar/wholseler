@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
@@ -123,7 +124,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
           render: (b) => (
             <>
               <p className="font-medium">{b.name}</p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {b.marketArea}, {b.city}
               </p>
             </>
@@ -135,7 +136,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
           render: (b) => (
             <>
               <p>{b.owner.name}</p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
+              <p className="mt-1 text-[11px] text-muted-foreground">
                 {b.owner.phone}
               </p>
             </>
@@ -250,10 +251,10 @@ export function Platform({ section = "overview" }: { section?: string }) {
                       <Check className="size-3.5 text-muted-foreground" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium">
+                      <p className="text-xs font-medium">
                         {log.action.toLowerCase().replaceAll("_", " ")}
                       </p>
-                      <p className="mt-1 truncate text-[10px] text-muted-foreground">
+                      <p className="mt-1 truncate text-[11px] text-muted-foreground">
                         {log.detail}
                       </p>
                       <p className="mt-1 text-[9px] text-muted-foreground">
@@ -307,7 +308,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
         <Panel>
           <div className="flex items-center justify-between p-4">
             <Pill>{data.businesses.length} businesses</Pill>
-            <select
+            <SearchSelect
               className="field !w-auto !text-xs"
               aria-label="Business verification filter"
               value={statusFilter}
@@ -319,7 +320,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
                   {s.toLowerCase()}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
           {businessesTable(
             data.businesses.filter(
@@ -339,7 +340,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
                 render: (s) => (
                   <>
                     <p className="font-medium">{s.businessName}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {s.user.name} · {s.city}
                     </p>
                   </>
@@ -350,7 +351,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
                 key: "gst",
                 label: "GSTIN",
                 render: (s) => (
-                  <span className="font-mono text-[10px] text-muted-foreground">
+                  <span className="font-mono text-[11px] text-muted-foreground">
                     {s.gstNumber || "Not provided"}
                     <span className="mt-1 block">
                       PAN: {s.panNumber || "Not provided"}
@@ -403,7 +404,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
         <Panel>
           <div className="flex items-center justify-between p-4">
             <Pill>{data.products.length} catalog entries</Pill>
-            <select
+            <SearchSelect
               className="field !w-auto !text-xs"
               aria-label="Catalog moderation filter"
               value={statusFilter}
@@ -415,7 +416,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
                   {s.toLowerCase()}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </div>
           <DataTable<PlatformProduct>
             rows={data.products.filter(
@@ -438,7 +439,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
                     />
                     <span>
                       <span className="block font-medium">{p.name}</span>
-                      <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
+                      <span className="mt-1 block font-mono text-[11px] text-muted-foreground">
                         {p.sku}
                       </span>
                     </span>
@@ -451,7 +452,7 @@ export function Platform({ section = "overview" }: { section?: string }) {
                 render: (p) => (
                   <>
                     <p>{p.business.name}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {p.category}
                     </p>
                   </>
@@ -462,10 +463,10 @@ export function Platform({ section = "overview" }: { section?: string }) {
                 label: "Completeness",
                 render: (p) => (
                   <>
-                    <p className="text-[11px]">
+                    <p className="text-xs">
                       {p.images.length} photos · {p._count.variants} variants
                     </p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-muted-foreground">
                       {money(p.pricePaise, true)} / unit · MOQ {p.moq}
                     </p>
                   </>
@@ -653,7 +654,7 @@ function ReviewDialog({
         </DialogHeader>
         <form className="space-y-4" onSubmit={save}>
           <Field label="Review decision">
-            <select
+            <SearchSelect
               className="field"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
@@ -663,7 +664,7 @@ function ReviewDialog({
                   {s.toLowerCase()}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field
             label="Review note"
@@ -792,7 +793,7 @@ function BusinessReview({
                 <br />
                 {business.marketArea} · {business.categories.join(", ")}
               </p>
-              <p className="font-mono text-[10px] text-muted-foreground">
+              <p className="font-mono text-[11px] text-muted-foreground">
                 GSTIN: {business.gstNumber || "Not provided"}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -812,7 +813,7 @@ function BusinessReview({
                 </a>
               ))}
               {business.verificationNote && (
-                <p className="text-[11px]">
+                <p className="text-xs">
                   Review: {business.verificationNote}
                 </p>
               )}
@@ -841,7 +842,7 @@ function BusinessReview({
               </Field>
               {!ops && (
                 <Field label="Assigned subscription plan">
-                  <select
+                  <SearchSelect
                     className="field"
                     value={planId}
                     onChange={(e) => setPlanId(e.target.value)}
@@ -854,7 +855,7 @@ function BusinessReview({
                           {p.staffLimit} staff
                         </option>
                       ))}
-                  </select>
+                  </SearchSelect>
                 </Field>
               )}
               <FormError message={error} />

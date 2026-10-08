@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -97,16 +98,16 @@ export function Support() {
                 <button
                   key={t.id}
                   onClick={() => setSelectedId(t.id)}
-                  className={`block w-full px-5 py-4 text-left ${selected?.id === t.id ? "bg-violet-50/70" : "hover:bg-muted/40"}`}
+                  className={`block w-full px-5 py-4 text-left ${selected?.id === t.id ? "bg-secondary/70" : "hover:bg-muted/40"}`}
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[11px] text-muted-foreground">
                       {t.category.toLowerCase()}
                     </span>
                     <Status value={t.status} />
                   </div>
                   <p className="text-xs font-medium">{t.subject}</p>
-                  <p className="mt-2 text-[10px] text-muted-foreground">
+                  <p className="mt-2 text-[11px] text-muted-foreground">
                     {platform
                       ? t.business?.name || t.user.name
                       : date(t.createdAt)}{" "}
@@ -188,7 +189,7 @@ function NewTicket({
         </DialogHeader>
         <form className="space-y-4" onSubmit={save}>
           <Field label="Category">
-            <select
+            <SearchSelect
               className="field"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -198,7 +199,7 @@ function NewTicket({
                   {c.toLowerCase()}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Subject" required>
             <Input
@@ -283,7 +284,7 @@ function TicketThread({
             <Initials name={m.user.name} />
             <div className="flex-1">
               <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-medium">
+                <p className="text-xs font-medium">
                   {m.user.name}
                   {["PLATFORM_ADMIN", "PLATFORM_OPERATIONS"].includes(
                     m.user.role,
@@ -317,7 +318,7 @@ function TicketThread({
         <FormError message={error} />
         <div className="flex items-center justify-between gap-3">
           {platform ? (
-            <select
+            <SearchSelect
               aria-label="Ticket status"
               className="field !w-auto !text-xs"
               value={status}
@@ -326,9 +327,9 @@ function TicketThread({
               <option value="OPEN">Open</option>
               <option value="IN_PROGRESS">In progress</option>
               <option value="RESOLVED">Resolved</option>
-            </select>
+            </SearchSelect>
           ) : (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               Replies stay in this support record.
             </span>
           )}
@@ -392,9 +393,9 @@ export function Notifications() {
               {data.notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`flex gap-4 p-5 ${n.read ? "" : "bg-violet-50/30"}`}
+                  className={`flex gap-4 p-5 ${n.read ? "" : "bg-secondary/30"}`}
                 >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-primary">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
                     <Bell className="size-4" />
                   </span>
                   <div className="flex-1">
@@ -412,7 +413,7 @@ export function Notifications() {
                         {date(n.createdAt)} · {time(n.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
                       {n.body}
                     </p>
                     <div className="mt-3 flex items-center gap-3">
@@ -421,13 +422,13 @@ export function Notifications() {
                         onClick={() => {
                           void mark(n.id);
                         }}
-                        className="text-[10px] font-medium text-primary"
+                        className="text-[11px] font-medium text-primary"
                       >
                         Open workspace →
                       </Link>
                       {!n.read && (
                         <button
-                          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"
+                          className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
                           onClick={() => {
                             void mark(n.id);
                           }}

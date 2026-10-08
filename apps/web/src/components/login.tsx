@@ -134,7 +134,7 @@ export function Login({
   return (
     <div className="entry-page min-h-screen">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-6 lg:px-10">
-        <Link href="/" aria-label="Wholseler home">
+        <Link href="/" aria-label="BulkSaathi home">
           <Brand />
         </Link>
         <Button asChild variant="ghost" size="sm">
@@ -145,13 +145,13 @@ export function Login({
         </Button>
       </header>
       <main className="mx-auto grid max-w-7xl gap-12 px-5 py-8 lg:min-h-[calc(100vh-160px)] lg:grid-cols-2 lg:items-center lg:px-10 lg:py-12">
-        <section className="entry-story relative hidden overflow-hidden rounded-3xl p-10 lg:block">
+        <section className="entry-story relative hidden overflow-hidden p-10 lg:block">
           <p className="text-xs font-semibold uppercase tracking-[.18em] text-white/60">
             {buyer
               ? "A better way to source"
               : "Built for your wholesale business"}
           </p>
-          <h1 className="mt-8 max-w-md text-5xl font-semibold leading-[1.12] tracking-[-2px]">
+          <h1 className="mt-8 max-w-md text-4xl font-semibold leading-[1.2] tracking-[-1px]">
             {buyer ? (
               <>
                 Find the right products.
@@ -162,9 +162,9 @@ export function Login({
               </>
             ) : (
               <>
-                Less counter chaos.
+                Your business, organised.
                 <br />
-                <span className="text-white/50">More business, together.</span>
+                <span className="text-white/50">Every working day.</span>
               </>
             )}
           </h1>
@@ -200,10 +200,10 @@ export function Login({
             Mobile verification. Separate business workspaces.
           </div>
         </section>
-        <section className="mx-auto w-full max-w-md pb-8">
+        <section className="entry-form mx-auto w-full max-w-[460px]">
           {!challenge && !team && (
             <div
-              className="mb-9 grid grid-cols-2 gap-2 rounded-xl border bg-card p-1.5"
+              className="mb-8 grid grid-cols-2 gap-1 rounded-md bg-muted p-1"
               aria-label="Choose your workspace"
             >
               {[
@@ -222,14 +222,14 @@ export function Login({
                   key={value}
                   href={`${href}${next ? `?next=${encodeURIComponent(next)}` : ""}`}
                   aria-current={value === portal ? "page" : undefined}
-                  className={`rounded-lg px-3 py-3 text-center text-sm font-medium ${value === portal ? "bg-secondary text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  className={`rounded-md px-3 py-2.5 text-center text-[13px] font-medium ${value === portal ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   {label}
                 </Link>
               ))}
             </div>
           )}
-          <div className="mb-5 flex size-12 items-center justify-center rounded-2xl border bg-card text-primary">
+          <div className="mb-5 flex size-10 items-center justify-center rounded-md bg-secondary text-primary">
             {challenge ? <Smartphone /> : <Store />}
           </div>
           <h2 className="text-3xl font-semibold leading-tight tracking-[-1px]">
@@ -342,7 +342,7 @@ export function Login({
           </form>
           {!team && (
             <p className="mt-7 text-center text-sm text-muted-foreground">
-              {register ? "Already have an account?" : "New to Wholseler?"}{" "}
+              {register ? "Already have an account?" : "New to BulkSaathi?"}{" "}
               <Link
                 href={other}
                 className="font-medium text-primary underline-offset-4 hover:underline"

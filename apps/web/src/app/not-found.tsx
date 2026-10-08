@@ -8,7 +8,7 @@ export default function NotFound() {
         This workspace page was not found.
       </h1>
       <Button asChild variant="outline">
-        <Link href="/">Open Wholseler</Link>
+        <Link href="/">Open BulkSaathi</Link>
       </Button>
     </main>
   );

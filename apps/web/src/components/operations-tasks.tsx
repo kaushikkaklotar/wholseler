@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import { useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
@@ -77,7 +78,7 @@ export function OperationsTasks({
       >
         <div className="space-y-3 border-t p-5">
           <Field label="Current stage">
-            <select
+            <SearchSelect
               disabled={busy}
               className="field"
               value={data.business.onboardingStage}
@@ -88,7 +89,7 @@ export function OperationsTasks({
               {data.stages.map((s) => (
                 <option key={s}>{s}</option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <p className="text-xs text-muted-foreground">
             Ready requires an approved business, a published catalog entry and
@@ -225,7 +226,7 @@ function TaskForm({
             />
           </Field>
           <Field label="Category">
-            <select
+            <SearchSelect
               className="field"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
@@ -235,10 +236,10 @@ function TaskForm({
                   <option key={s}>{s}</option>
                 ),
               )}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Status">
-            <select
+            <SearchSelect
               className="field"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
@@ -246,10 +247,10 @@ function TaskForm({
               {["TODO", "IN_PROGRESS", "BLOCKED", "DONE"].map((s) => (
                 <option key={s}>{s}</option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Assigned to">
-            <select
+            <SearchSelect
               className="field"
               value={assigneeId}
               onChange={(e) => setAssignee(e.target.value)}
@@ -260,7 +261,7 @@ function TaskForm({
                   {m.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Due date">
             <Input

@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import useSWR from "swr";
@@ -326,7 +327,7 @@ function RenewalForm({
       <form onSubmit={save} className="space-y-4 border-t p-5">
         <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
           <Field label="Plan">
-            <select
+            <SearchSelect
               className="field"
               value={planId}
               onChange={(e) => {
@@ -339,10 +340,10 @@ function RenewalForm({
                   {p.name}
                 </option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Period">
-            <select
+            <SearchSelect
               className="field"
               value={cycle}
               onChange={(e) => {
@@ -352,7 +353,7 @@ function RenewalForm({
             >
               <option value="MONTHLY">One month</option>
               <option value="YEARLY">One year</option>
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Received amount (₹)" required>
             <Input
@@ -366,7 +367,7 @@ function RenewalForm({
             />
           </Field>
           <Field label="Payment mode">
-            <select
+            <SearchSelect
               className="field"
               value={mode}
               onChange={(e) => {
@@ -378,7 +379,7 @@ function RenewalForm({
               {["UPI", "BANK", "CASH", "COMPLIMENTARY"].map((m) => (
                 <option key={m}>{m}</option>
               ))}
-            </select>
+            </SearchSelect>
           </Field>
           <Field label="Receipt / transaction reference" required>
             <Input

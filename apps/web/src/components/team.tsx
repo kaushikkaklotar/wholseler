@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import Link from "next/link";
 import { useState } from "react";
 import useSWR from "swr";
@@ -77,7 +78,7 @@ export function Team() {
           <div className="mb-6 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
             <Panel>
               <div className="flex gap-4 p-5">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-violet-50 text-primary">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-secondary text-primary">
                   <UsersRound className="size-5" />
                 </span>
                 <div className="flex-1">
@@ -96,7 +97,7 @@ export function Team() {
                       }}
                     />
                   </div>
-                  <p className="text-[11px] leading-5 text-muted-foreground">
+                  <p className="text-xs leading-5 text-muted-foreground">
                     {data.activeCount >= data.plan.staffLimit
                       ? "Your staff limit is reached. Disable an account or ask the platform team to upgrade."
                       : `${data.plan.staffLimit - data.activeCount} more active staff accounts available. Disabled accounts do not consume the limit.`}
@@ -111,14 +112,14 @@ export function Team() {
                   <h2 className="text-xs font-semibold">
                     Permissions apply immediately
                   </h2>
-                  <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                  <p className="mt-2 text-xs leading-5 text-muted-foreground">
                     Accounts sign in with mobile OTP. Disabled members lose
                     access, and every change is recorded.
                   </p>
                   {can("STAFF:EDIT") && (
                     <Link
                       href="/support?category=SUBSCRIPTION"
-                      className="mt-2 block text-[11px] font-medium text-primary"
+                      className="mt-2 block text-xs font-medium text-primary"
                     >
                       Manage plan limits →
                     </Link>
@@ -143,7 +144,7 @@ export function Team() {
                       <Initials name={s.user.name} />
                       <span>
                         <span className="block font-medium">{s.user.name}</span>
-                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
                           +91 {s.user.phone}
                         </span>
                       </span>
@@ -328,7 +329,7 @@ function StaffEditor({
                 />
               </Field>
               <Field label="Permission preset">
-                <select
+                <SearchSelect
                   className="field"
                   defaultValue=""
                   onChange={(e) => {
@@ -349,7 +350,7 @@ function StaffEditor({
                   {Object.keys(staffPresets).map((p) => (
                     <option key={p}>{p}</option>
                   ))}
-                </select>
+                </SearchSelect>
               </Field>
             </div>
             <div className="overflow-x-auto rounded-lg border">
@@ -400,7 +401,7 @@ function StaffEditor({
               />
               Account enabled
             </label>
-            <p className="text-[10px] leading-5 text-muted-foreground">
+            <p className="text-[11px] leading-5 text-muted-foreground">
               Create, edit and delete permissions require view access. Disable
               an account to revoke its active sessions.
             </p>

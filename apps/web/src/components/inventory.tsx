@@ -1,4 +1,5 @@
 "use client";
+import { SearchSelect } from "@/components/ui/search-select";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import useSWR from "swr";
@@ -190,7 +191,7 @@ export function Inventory() {
               ) : (
                 <div className="ml-auto flex items-center gap-2">
                   <Clock3 className="size-3.5 text-muted-foreground" />
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {variantId ? "Selected variant" : "All inventory movements"}
                   </span>
                   {variantId && (
@@ -243,7 +244,7 @@ export function Inventory() {
                           <span className="block font-medium">
                             {v.product.name}
                           </span>
-                          <span className="mt-1 block font-mono text-[10px] text-muted-foreground">
+                          <span className="mt-1 block font-mono text-[11px] text-muted-foreground">
                             {v.product.sku}
                           </span>
                         </span>
@@ -256,7 +257,7 @@ export function Inventory() {
                     render: (v) => (
                       <>
                         {v.size}
-                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                        <span className="mt-1 block text-[11px] text-muted-foreground">
                           {v.color}
                         </span>
                       </>
@@ -268,7 +269,7 @@ export function Inventory() {
                     render: (v) => (
                       <span className="numeric text-sm font-semibold">
                         {(v.stock - (v.reserved || 0)).toLocaleString()}
-                        <span className="block text-[10px] font-normal text-muted-foreground">
+                        <span className="block text-[11px] font-normal text-muted-foreground">
                           {v.stock} on hand · {v.reserved || 0} held
                         </span>
                       </span>
@@ -378,7 +379,7 @@ export function Inventory() {
                       render: (m) => (
                         <>
                           <span>{date(m.createdAt)}</span>
-                          <span className="mt-1 block text-[10px] text-muted-foreground">
+                          <span className="mt-1 block text-[11px] text-muted-foreground">
                             {time(m.createdAt)}
                           </span>
                         </>
@@ -390,7 +391,7 @@ export function Inventory() {
                       render: (m) => (
                         <>
                           <span className="font-medium">{m.product.name}</span>
-                          <span className="mt-1 block text-[10px] text-muted-foreground">
+                          <span className="mt-1 block text-[11px] text-muted-foreground">
                             {m.product.sku} · {m.variant.size} ·{" "}
                             {m.variant.color}
                           </span>
@@ -417,7 +418,7 @@ export function Inventory() {
                           {m.quantity > 0 ? "+" : ""}
                           {m.quantity}
                           {!!m.reservedDelta && (
-                            <span className="block text-[10px]">
+                            <span className="block text-[11px]">
                               Hold {m.reservedDelta > 0 ? "+" : ""}
                               {m.reservedDelta}
                             </span>
@@ -438,8 +439,8 @@ export function Inventory() {
                       label: "Reason / actor",
                       render: (m) => (
                         <div className="max-w-52">
-                          <p className="text-[11px]">{m.note}</p>
-                          <p className="mt-1 text-[10px] text-muted-foreground">
+                          <p className="text-xs">{m.note}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
                             {m.actor.name}
                           </p>
                         </div>
@@ -450,7 +451,7 @@ export function Inventory() {
                   emptyDescription="Opening stock, bills, purchases and returns will appear here."
                 />
                 {ledger.total > 50 && (
-                  <div className="flex items-center justify-end gap-3 border-t p-3 text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-end gap-3 border-t p-3 text-xs text-muted-foreground">
                     <span>
                       Movement page {page} · {ledger.total} entries
                     </span>
@@ -575,7 +576,7 @@ function MovementDialog({
             <span className="numeric font-semibold">{variant.stock} units</span>
           </div>
           <Field label="Movement type">
-            <select
+            <SearchSelect
               className="field"
               value={type}
               onChange={(e) => setType(e.target.value)}
@@ -583,18 +584,18 @@ function MovementDialog({
               <option value="PURCHASE">Purchase / stock received</option>
               <option value="ADJUSTMENT">Stock adjustment</option>
               <option value="STOCK_OUT">Manual stock out</option>
-            </select>
+            </SearchSelect>
           </Field>
           {type === "ADJUSTMENT" && (
             <Field label="Direction">
-              <select
+              <SearchSelect
                 className="field"
                 value={direction}
                 onChange={(e) => setDirection(e.target.value)}
               >
                 <option value="add">Increase stock</option>
                 <option value="remove">Reduce stock</option>
-              </select>
+              </SearchSelect>
             </Field>
           )}
           <Field label="Number of units" required>
